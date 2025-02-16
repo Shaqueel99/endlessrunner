@@ -16,29 +16,41 @@ class GameView @JvmOverloads constructor(
 ) : View(context, attrs, defStyle) {
 
     private val paint = Paint()
+    private val textPaint = Paint().apply {
+        color = Color.WHITE
+        textSize = 60f
+        isAntiAlias = true
+    }
 
-    // Runner (square) properties
-    var squareX = 200f
-    var squareY = 300f
-    val squareSize = 100f
+    // Runner is now represented as a PhysicsBody.
+    private lateinit var runnerBody: PhysicsBody
+    private val runnerSize = 100f
 
-    // Gravity and jump properties
-    private var velocityY = 0f
+    // Physics parameters.
     private val gravity = 2f
     private val jumpVelocity = -40f
 
-    // Ground (platform) properties
+    // Ground properties.
     var groundSpeed = 10f
-    var groundOffset = 0f
+    // (Remove groundOffset – we’ll use world coordinates.)
     val groundHeight = 150f
+    private var groundBitmap: Bitmap? = null
 
-    // Background properties
-    var backgroundSpeed = groundSpeed / 2  // slower for a parallax effect
-    var backgroundOffset = 0f
+    // Background properties.
+    // (Remove backgroundOffset – we'll calculate its effective drawing position from world coordinates.)
     private var backgroundBitmap: Bitmap? = null
 
-    // Coroutine job for game loop
+    // Score.
+    private var score: Int = 0
+
+    // Platform Manager.
+    private var platformManager: PlatformManager? = null
+
+    // Coroutine job for game loop.
     private var gameJob: Job? = null
+
+    // Desired runner screen x position (so runner appears fixed at this x).
+    private val desiredRunnerX = 200f
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
@@ -48,9 +60,9 @@ class GameView @JvmOverloads constructor(
     private fun startGameLoop() {
         gameJob = CoroutineScope(Dispatchers.Main).launch {
             while (isActive) {
-                updateGame()   // update positions/state
-                invalidate()   // trigger redraw
-                delay(16L)     // roughly 60 fps
+                updateGame()
+                invalidate()
+                delay(16L)  // Approximately 60 FPS.
             }
         }
     }
@@ -58,60 +70,107 @@ class GameView @JvmOverloads constructor(
     private fun updateGame() {
         if (width == 0) return
 
-        // Update background offset for scrolling effect using the bitmap's width
-        backgroundOffset -= backgroundSpeed
-        backgroundBitmap?.let { bmp ->
-            if (backgroundOffset <= -bmp.width) {
-                // Reset offset by adding bmp.width (or use modulus for a more general solution)
-                backgroundOffset += bmp.width
+        score++
+
+        // Update runner's world position horizontally.
+        runnerBody.x += groundSpeed
+
+        // Update platforms.
+        platformManager?.update(groundSpeed)  // We'll modify PlatformManager to use world coordinates.
+
+        // Apply gravity.
+        runnerBody.vy += gravity
+        runnerBody.y += runnerBody.vy
+
+        // Check collisions with each platform.
+        platformManager?.platforms?.forEach { platform ->
+            // Create a temporary PhysicsBody for the platform.
+            val platformBody = PhysicsBody(
+                x = platform.x,
+                y = platform.y,
+                width = platform.width,
+                height = platform.height,
+                vx = 0f,
+                vy = 0f
+            )
+            if (aabbCollision(runnerBody, platformBody)) {
+                resolveCollision(runnerBody, platformBody)
             }
         }
 
-        // Update the ground offset for scrolling effect (using view width here)
-        groundOffset -= groundSpeed
-        if (groundOffset <= -width.toFloat()) {
-            groundOffset = 0f
+        // Reset the game if the runner falls off the bottom.
+        if (runnerBody.y > height) {
+            resetGame()
         }
+    }
 
-        // Update jump/gravity for the runner
-        val groundLevel = height - groundHeight - squareSize
-        if (squareY < groundLevel || velocityY < 0f) {
-            velocityY += gravity
-            squareY += velocityY
-            if (squareY > groundLevel) {
-                squareY = groundLevel
-                velocityY = 0f
-            }
-        }
+    private fun resetGame() {
+        score = 0
+        runnerBody.vx = 0f
+        runnerBody.vy = 0f
+        // Reset runner's position: keep its world x as is or reset to a starting value,
+        // and place it 200px above the ground.
+        runnerBody.x = 200f  // Alternatively, you might keep world continuity.
+        runnerBody.y = height - groundHeight - runnerBody.height - 200f
+        platformManager?.platforms?.clear()
+        platformManager = PlatformManager(width, height, groundHeight, groundSpeed)
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // Draw scrolling background image if available
-        backgroundBitmap?.let { bmp ->
-            // Draw enough copies to cover the entire width of the view.
-            var x = backgroundOffset
+        // --- Draw Background with Parallax ---
+        // Define a parallax factor (e.g., 0.5 means background moves at half the player's speed)
+        val parallaxFactor = 0.5f
+        // Compute the effective background offset from the runner's world position.
+        // We use (runnerBody.x - desiredRunnerX) because desiredRunnerX is where the runner appears on screen.
+        val rawBgOffset = (runnerBody.x - desiredRunnerX) * parallaxFactor
+        // We want the background to loop seamlessly.
+        // Compute effective offset in screen coordinates as a negative remainder of the background's width.
+        val bmp = backgroundBitmap
+        if (bmp != null) {
+            // Compute remainder (in a way that gives a value in [-bmp.width, 0)).
+            var effectiveBgOffset = - (rawBgOffset % bmp.width)
+            if (effectiveBgOffset > 0) {
+                effectiveBgOffset -= bmp.width
+            }
+            // Draw background tiles across the screen.
+            var x = effectiveBgOffset
             while (x < width) {
                 canvas.drawBitmap(bmp, x, 0f, null)
                 x += bmp.width
             }
-        } ?: run {
-            // Fallback: fill with a default color if no image is loaded.
+        } else {
             canvas.drawColor(Color.LTGRAY)
         }
 
-        // Draw the ground on top of the background
-        paint.color = Color.WHITE
-        canvas.drawRect(groundOffset, height - groundHeight, groundOffset + width, height.toFloat(), paint)
-        if (groundOffset < 0) {
-            canvas.drawRect(groundOffset + width, height - groundHeight, groundOffset + 2 * width, height.toFloat(), paint)
+        // --- Draw World Elements with Camera Translation ---
+        // Compute camera offset so that the runner appears at desiredRunnerX.
+        val cameraOffsetX = runnerBody.x - desiredRunnerX
+        canvas.save()
+        canvas.translate(-cameraOffsetX, 0f)
+
+
+
+        // Draw platforms.
+        paint.color = Color.DKGRAY
+        platformManager?.platforms?.forEach { platform ->
+            canvas.drawRect(platform.x, platform.y, platform.x + platform.width, platform.y + platform.height, paint)
         }
 
-        // Draw the runner (a blue square) on top of everything
+        // Draw runner.
         paint.color = Color.BLUE
-        canvas.drawRect(squareX, squareY, squareX + squareSize, squareY + squareSize, paint)
+        canvas.drawRect(runnerBody.x, runnerBody.y, runnerBody.x + runnerBody.width, runnerBody.y + runnerBody.height, paint)
+
+        canvas.restore()
+
+        // --- Draw UI Elements ---
+        canvas.drawText("Score: $score", 50f, 100f, textPaint)
     }
+
+
+
+
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
@@ -120,28 +179,48 @@ class GameView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        // Position the runner so its bottom aligns with the ground.
-        squareY = h - groundHeight - squareSize
+        // Initialize the runner's physics body.
+        val startY = h - groundHeight - runnerSize - 200f  // 200px above ground.
+        runnerBody = PhysicsBody(
+            x = 200f,  // Starting world x-coordinate.
+            y = startY,
+            width = runnerSize,
+            height = runnerSize,
+            vx = 0f,
+            vy = 0f,
+            mass = 1f,
+            restitution = 0.0f
+        )
+        // Initialize PlatformManager with world coordinates.
+        platformManager = PlatformManager(w, h, groundHeight, groundSpeed)
 
-        // Load the background image and scale it so its height matches the view height,
-        // preserving the aspect ratio.
+        // Load and scale the background image (preserving aspect ratio).
         backgroundBitmap = BitmapFactory.decodeResource(resources, R.drawable.desertnight_0)
         backgroundBitmap?.let { bmp ->
             val scale = h.toFloat() / bmp.height
             val newWidth = (bmp.width * scale).toInt()
             backgroundBitmap = Bitmap.createScaledBitmap(bmp, newWidth, h, true)
         }
+
+        // Load and scale the ground image.
+        groundBitmap = BitmapFactory.decodeResource(resources, R.drawable.desertnight_4)
+        groundBitmap?.let { bmp ->
+            val scale = groundHeight / bmp.height.toFloat()
+            val newWidth = (bmp.width * scale).toInt()
+            groundBitmap = Bitmap.createScaledBitmap(bmp, newWidth, groundHeight.toInt(), true)
+        }
     }
 
-    // Detect taps to trigger a jump
+
+    // Handle taps to trigger a jump.
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         when (event?.action) {
             MotionEvent.ACTION_DOWN -> {
-                val groundLevel = height - groundHeight - squareSize
-                if (squareY >= groundLevel) {
-                    velocityY = jumpVelocity
+                // Jump only if the runner is not already moving vertically.
+                if (runnerBody.vy == 0f) {
+                    runnerBody.vy = jumpVelocity
                 }
-                performClick() // for accessibility
+                performClick()
                 return true
             }
         }

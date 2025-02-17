@@ -155,6 +155,7 @@ class GameView @JvmOverloads constructor(
 
         // Reset the game if the runner falls off the bottom.
         if (runnerBody.y > height) {
+
             resetGame()
         }
     }

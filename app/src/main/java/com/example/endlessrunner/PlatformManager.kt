@@ -16,7 +16,6 @@ class PlatformManager(
     // Constants to control spacing.
     private val minHorizontalGap = 150f
     private val maxHorizontalGap = 500f
-    private val maxVerticalDiff = 250f
     private val platformHeight = 20f
 
     init {
@@ -42,33 +41,26 @@ class PlatformManager(
         }
     }
 
-
     private fun spawnPlatform() {
-        // Global vertical bounds for platforms.
-        val minY = 100f
-        val maxY = viewHeight - groundHeight - platformHeight - 50f
+        // Define vertical bounds so platforms appear within a reachable range:
+        // Platforms will be spawned between 400px and 50px above the ground.
+        val minY = viewHeight - groundHeight - 400f
+        val maxY = viewHeight - groundHeight - 50f
 
         // Find the rightmost platform's right edge.
         val lastPlatform = platforms.maxByOrNull { it.x + it.width }
         val startX = lastPlatform?.x?.plus(lastPlatform.width) ?: viewWidth.toFloat()
 
-        // Random horizontal gap within reachable distance.
+        // Random horizontal gap.
         val gap = minHorizontalGap + (Math.random().toFloat() * (maxHorizontalGap - minHorizontalGap))
         val xPos = startX + gap
 
-        // For the vertical position, base it on the last platform's y (or default).
-        val baseY = lastPlatform?.y ?: (viewHeight - groundHeight - platformHeight)
-        val verticalDiff = -maxVerticalDiff + (Math.random().toFloat() * (2 * maxVerticalDiff))
-        val yPos = baseY + verticalDiff
-        // Clamp y within global bounds.
-        val clampedY = yPos.coerceIn(minY, maxY)
+        // Random vertical position within the new, narrower bounds.
+        val yPos = minY + (Math.random().toFloat() * (maxY - minY))
 
-        // Random platform width between 100 and 300.
+        // Random platform width between 500 and 700.
         val platformWidth = 500f + (Math.random().toFloat() * 200f)
 
-        platforms.add(Platform(xPos, clampedY, platformWidth, platformHeight))
+        platforms.add(Platform(xPos, yPos, platformWidth, platformHeight))
     }
-
-
-
 }

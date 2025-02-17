@@ -10,6 +10,10 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import kotlinx.coroutines.*
+import kotlin.math.abs
+
+// Data class to represent a coin.
+data class Coin(var x: Float, var y: Float, val width: Float, val height: Float)
 
 class GameView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyle: Int = 0
@@ -22,29 +26,40 @@ class GameView @JvmOverloads constructor(
         isAntiAlias = true
     }
 
-    // Runner is now represented as a PhysicsBody.
+    // Runner represented as a PhysicsBody.
     private lateinit var runnerBody: PhysicsBody
     private val runnerSize = 100f
 
-    // We'll add a rotation property for the runner (in degrees).
+    // Rotation properties.
     private var runnerRotation = 0f
-    // Define a constant for how many degrees to rotate per frame while airborne.
-    private val flipSpeed = 10f
+    private var flipSpeed = 0f
 
     // Physics parameters.
     private val gravity = 2f
     private val jumpVelocity = -40f
 
+    // Variable jump parameters.
+    private var isJumping = false
+
     // Ground properties.
-    var groundSpeed = 10f
+    var groundSpeed = 5f
+    // Acceleration to increase groundSpeed over time.
+    private val acceleration = 0.0025f
     val groundHeight = 150f
     private var groundBitmap: Bitmap? = null
 
     // Background properties.
     private var backgroundBitmap: Bitmap? = null
 
-    // Score.
-    private var score: Int = 0
+    // Score and multiplier.
+    private var score: Float = 0f
+    private var scoreMultiplier = 1f
+
+    // Coins.
+    private val coins = mutableListOf<Coin>()
+    // Chance to spawn a coin on a platform (e.g., 1% chance per update).
+    private val coinChance = 0.001
+    private val coinSize = 40f
 
     // Platform Manager.
     private var platformManager: PlatformManager? = null
@@ -52,7 +67,7 @@ class GameView @JvmOverloads constructor(
     // Coroutine job for game loop.
     private var gameJob: Job? = null
 
-    // Desired runner screen x position (so runner appears fixed at this x).
+    // Desired runner screen x position.
     private val desiredRunnerX = 200f
 
     override fun onAttachedToWindow() {
@@ -73,17 +88,42 @@ class GameView @JvmOverloads constructor(
     private fun updateGame() {
         if (width == 0) return
 
-        score++
+        // Increase score by multiplier.
+        score += scoreMultiplier
 
+        // Ramp up groundSpeed over time.
+        groundSpeed += acceleration
+        flipSpeed = groundSpeed
         // Update runner's world position horizontally.
         runnerBody.x += groundSpeed
 
-        // Update platforms.
+        // Update platforms using the current groundSpeed.
         platformManager?.update(groundSpeed)
+
+        // Spawn coins on platforms if not already present.
+        platformManager?.platforms?.forEach { platform ->
+            // Simple check: if no coin exists on this platform (by x overlap).
+            if (coins.none { coin -> coin.x >= platform.x && coin.x <= platform.x + platform.width }) {
+                if (Math.random() < coinChance) {
+                    spawnCoinOnPlatform(platform)
+                }
+            }
+        }
+
+        // Update coins: move them left along with the world.
+        coins.forEach { it.x -= groundSpeed }
+        coins.removeAll { it.x + it.width < 0 }
 
         // Apply gravity.
         runnerBody.vy += gravity
         runnerBody.y += runnerBody.vy
+
+        // Update runner rotation (flip) when airborne.
+        if (abs(runnerBody.vy) > 0.0f) {
+            runnerRotation += flipSpeed
+        } else {
+            runnerRotation = 0f
+        }
 
         // Check collisions with each platform.
         platformManager?.platforms?.forEach { platform ->
@@ -100,12 +140,17 @@ class GameView @JvmOverloads constructor(
             }
         }
 
-        // If runner is airborne (vertical velocity above a small epsilon), update flip.
-        if (kotlin.math.abs(runnerBody.vy) > 0.5f) {
-            runnerRotation += flipSpeed
-        } else {
-            // Consider the runner to be "on the ground" when vertical velocity is nearly zero.
-            runnerRotation = 0f
+        // Check collision with coins.
+        val coinIterator = coins.iterator()
+        while (coinIterator.hasNext()) {
+            val coin = coinIterator.next()
+            if (runnerBody.x < coin.x + coin.width &&
+                runnerBody.x + runnerBody.width > coin.x &&
+                runnerBody.y < coin.y + coin.height &&
+                runnerBody.y + runnerBody.height > coin.y) {
+                coinIterator.remove()
+                scoreMultiplier += 0.5f
+            }
         }
 
         // Reset the game if the runner falls off the bottom.
@@ -114,17 +159,27 @@ class GameView @JvmOverloads constructor(
         }
     }
 
+    private fun spawnCoinOnPlatform(platform: Platform) {
+        // Randomize coin's x coordinate so it sits randomly on the platform.
+        val coinX = platform.x + (Math.random().toFloat() * (platform.width - coinSize))
+        // Place the coin 20px higher above the platform.
+        val coinY = platform.y - coinSize - 20f
+        coins.add(Coin(coinX, coinY, coinSize, coinSize))
+    }
 
     private fun resetGame() {
-        score = 0
+        score = 0f
+        groundSpeed = 5f
+        scoreMultiplier = 1f
         runnerBody.vx = 0f
         runnerBody.vy = 0f
         runnerRotation = 0f
-        // Reset runner's position: world x resets to 200, and runner is placed 200px above ground.
         runnerBody.x = 200f
         runnerBody.y = height - groundHeight - runnerBody.height - 200f
         platformManager?.platforms?.clear()
         platformManager = PlatformManager(width, height, groundHeight, groundSpeed)
+        coins.clear()
+        isJumping = false
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -159,9 +214,14 @@ class GameView @JvmOverloads constructor(
             canvas.drawRect(platform.x, platform.y, platform.x + platform.width, platform.y + platform.height, paint)
         }
 
-        // Draw runner with flip.
+        // Draw coins.
+        paint.color = Color.YELLOW
+        coins.forEach { coin ->
+            canvas.drawOval(coin.x, coin.y, coin.x + coin.width, coin.y + coin.height, paint)
+        }
+
+        // Draw runner with rotation.
         canvas.save()
-        // Rotate about the runner's center.
         val runnerCenterX = runnerBody.x + runnerBody.width / 2
         val runnerCenterY = runnerBody.y + runnerBody.height / 2
         canvas.rotate(runnerRotation, runnerCenterX, runnerCenterY)
@@ -172,7 +232,10 @@ class GameView @JvmOverloads constructor(
         canvas.restore()
 
         // --- Draw UI Elements ---
-        canvas.drawText("Score: $score", 50f, 100f, textPaint)
+        canvas.drawText("Score: ${score.toInt()}", 50f, 100f, textPaint)
+        canvas.drawText("Multiplier: $scoreMultiplier", 50f, 170f, textPaint)
+        canvas.drawText("Speed: ${groundSpeed.toInt()}", 50f, 240f, textPaint)
+
     }
 
     override fun onDetachedFromWindow() {
@@ -182,7 +245,7 @@ class GameView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        val startY = h - groundHeight - runnerSize - 200f  // 200px above ground.
+        val startY = h - groundHeight - runnerSize - 200f
         runnerBody = PhysicsBody(
             x = 200f,
             y = startY,
@@ -194,6 +257,7 @@ class GameView @JvmOverloads constructor(
             restitution = 0.0f
         )
         platformManager = PlatformManager(w, h, groundHeight, groundSpeed)
+
         // Load and scale background image.
         backgroundBitmap = BitmapFactory.decodeResource(resources, R.drawable.desertnight_0)
         backgroundBitmap?.let { bmp ->
@@ -201,6 +265,7 @@ class GameView @JvmOverloads constructor(
             val newWidth = (bmp.width * scale).toInt()
             backgroundBitmap = Bitmap.createScaledBitmap(bmp, newWidth, h, true)
         }
+
         // Load and scale ground image.
         groundBitmap = BitmapFactory.decodeResource(resources, R.drawable.desertnight_4)
         groundBitmap?.let { bmp ->
@@ -214,10 +279,17 @@ class GameView @JvmOverloads constructor(
         when (event?.action) {
             MotionEvent.ACTION_DOWN -> {
                 if (runnerBody.vy == 0f) {
-                    runnerBody.vy = jumpVelocity
+                    isJumping = true
+                    runnerBody.vy = jumpVelocity * 1.25f
                 }
                 performClick()
                 return true
+            }
+            MotionEvent.ACTION_UP -> {
+                if (isJumping && runnerBody.vy < 0f) {
+                    runnerBody.vy *= 0.5f
+                }
+                isJumping = false
             }
         }
         return super.onTouchEvent(event)

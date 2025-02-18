@@ -9,7 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class MainMenuActivity : AppCompatActivity(), LoginRegisterDialog.LoginRegisterListener {
+class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, RegisterDialog.RegisterListener {
     private lateinit var db: LeaderboardDatabase  // Database instance
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,8 +21,14 @@ class MainMenuActivity : AppCompatActivity(), LoginRegisterDialog.LoginRegisterL
         val sharedPrefs = getSharedPreferences("user_prefs", MODE_PRIVATE)
         val username = sharedPrefs.getString("username", null)
 
-        if (username == null) {
+        if (username == null)
+        {
             showLoginDialog()
+        }
+        else
+        {
+            // Show Toast that user is logged in
+            Toast.makeText(this, "Welcome back, $username!", Toast.LENGTH_SHORT).show()
         }
 
         val playButton = findViewById<Button>(R.id.playButton)
@@ -55,16 +61,20 @@ class MainMenuActivity : AppCompatActivity(), LoginRegisterDialog.LoginRegisterL
     }
 
     private fun showLoginDialog() {
-        val dialog = LoginRegisterDialog(this)
-        dialog.isCancelable = false
-        dialog.show(supportFragmentManager, "LoginRegisterDialog")
+        val loginDialog = LoginDialog(this)
+        loginDialog.isCancelable = false
+        loginDialog.show(supportFragmentManager, "LoginDialog")
     }
-
+    private fun showRegisterDialog() {
+        val dialog = RegisterDialog(this)
+        dialog.isCancelable = false
+        dialog.show(supportFragmentManager, "RegisterDialog")
+    }
     override fun onLogin(username: String, password: String) {
         CoroutineScope(Dispatchers.IO).launch {
             val user = db.userDao().getUser(username)
-
-            if (user != null && user.hashedPassword == password) {
+            // Hash the entered password and compare with stored hash.
+            if (user != null && user.hashedPassword == HashUtil.hashPassword(password)) {
                 runOnUiThread {
                     Toast.makeText(this@MainMenuActivity, "Logged in as $username", Toast.LENGTH_SHORT).show()
                     saveUser(username)
@@ -78,12 +88,14 @@ class MainMenuActivity : AppCompatActivity(), LoginRegisterDialog.LoginRegisterL
         }
     }
 
-    override fun onRegister(username: String, password: String) {
+
+    override fun onRegister(username: String, password: String, imagePath: String?) {
         CoroutineScope(Dispatchers.IO).launch {
             val existingUser = db.userDao().getUser(username)
 
             if (existingUser == null) {
-                val newUser = UserProfile(username, password, null, 0)
+                val hashedPassword = HashUtil.hashPassword(password)
+                val newUser = UserProfile(username, hashedPassword, imagePath, 0)
                 db.userDao().insertUser(newUser)
 
                 runOnUiThread {
@@ -93,10 +105,15 @@ class MainMenuActivity : AppCompatActivity(), LoginRegisterDialog.LoginRegisterL
             } else {
                 runOnUiThread {
                     Toast.makeText(this@MainMenuActivity, "Username already exists!", Toast.LENGTH_SHORT).show()
-                    showLoginDialog()
+                    showRegisterDialog()
                 }
             }
         }
+    }
+
+
+    override fun onSwitchToRegister() {
+        showRegisterDialog()
     }
 
     private fun saveUser(username: String) {

@@ -1,39 +1,38 @@
 package com.example.endlessrunner
 
 import android.app.Dialog
-import android.content.Context
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 
-class LoginRegisterDialog(private val listener: LoginRegisterListener) : DialogFragment() {
+class LoginDialog(private val listener: LoginListener) : DialogFragment() {
 
-    interface LoginRegisterListener {
+    interface LoginListener {
         fun onLogin(username: String, password: String)
-        fun onRegister(username: String, password: String)
+        fun onSwitchToRegister()  // NEW: Added method to transition to register
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val builder = AlertDialog.Builder(requireActivity())
+        val builder = AlertDialog.Builder(requireContext())
         val inflater = requireActivity().layoutInflater
-        val view = inflater.inflate(R.layout.dialog_login_register, null)
+        val view = inflater.inflate(R.layout.dialog_login, null)
 
         val usernameInput = view.findViewById<EditText>(R.id.usernameInput)
         val passwordInput = view.findViewById<EditText>(R.id.passwordInput)
         val loginButton = view.findViewById<Button>(R.id.loginButton)
-        val registerButton = view.findViewById<Button>(R.id.registerButton)
+        val registerButton = view.findViewById<Button>(R.id.registerButton) // NEW
 
         loginButton.setOnClickListener {
-            listener.onLogin(usernameInput.text.toString(), passwordInput.text.toString())
+            val username = usernameInput.text.toString()
+            val password = passwordInput.text.toString()
+            listener.onLogin(username, password)
             dismiss()
         }
 
-        registerButton.setOnClickListener {
-            listener.onRegister(usernameInput.text.toString(), passwordInput.text.toString())
+        registerButton.setOnClickListener {  // NEW: Switch to register dialog
+            listener.onSwitchToRegister()
             dismiss()
         }
 

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@android:color/black">
+
+    <EditText
+        android:id="@+id/usernameInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Username"
+        android:textColor="@android:color/white"
+        android:textColorHint="@android:color/darker_gray"
+        android:background="@android:color/transparent"
+        android:padding="12dp" />
+
+    <EditText
+        android:id="@+id/passwordInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Password"
+        android:inputType="textPassword"
+        android:textColor="@android:color/white"
+        android:textColorHint="@android:color/darker_gray"
+        android:background="@android:color/transparent"
+        android:padding="12dp"
+        android:layout_marginTop="8dp" />
+
+    <ImageView
+        android:id="@+id/profileImageView"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_gravity="center"
+        android:scaleType="centerCrop"
+        android:background="@android:color/darker_gray"
+        android:layout_marginTop="12dp" />
+
+    <Button
+        android:id="@+id/imageUploadButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Upload Image"
+        android:layout_marginTop="8dp" />
+
+    <Button
+        android:id="@+id/registerButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Register"
+        android:layout_marginTop="16dp" />
+</LinearLayout>

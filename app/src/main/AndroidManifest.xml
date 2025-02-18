@@ -1,6 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Camera & Storage Permissions -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <application
         android:name=".EndlessRunnerApp"
         android:allowBackup="true"
@@ -9,6 +15,7 @@
         android:theme="@style/Theme.Endlessrunner"
         tools:targetApi="31">
 
+        <!-- Login/Register Activity (FIRST SCREEN) -->
         <activity
             android:name=".MainMenuActivity"
             android:exported="true">
@@ -17,8 +24,9 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
         <activity android:name=".GameOverActivity" />
         <activity android:name=".MainActivity" />
-    </application>
 
+    </application>
 </manifest>

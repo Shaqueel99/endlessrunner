@@ -26,7 +26,7 @@ class GameOverActivity : AppCompatActivity() {
         scoreTextView.text = "Your Score: $score"
 
         // Obtain repository from application.
-        leaderboardRepository = (application as EndlessRunnerApp).leaderboardRepository
+        //leaderboardRepository = (application as EndlessRunnerApp).leaderboardRepository
 
         val submitButton = findViewById<Button>(R.id.submitScoreButton)
         submitButton.setOnClickListener {

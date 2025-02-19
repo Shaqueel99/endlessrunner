@@ -1,6 +1,5 @@
 package com.example.endlessrunner
 
-import android.app.AlertDialog
 import android.os.Bundle
 import android.text.InputType
 import android.widget.Button
@@ -8,25 +7,31 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import kotlinx.coroutines.*
+import androidx.appcompat.app.AlertDialog
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 
 class GameOverActivity : AppCompatActivity() {
 
-    private lateinit var leaderboardRepository: LeaderboardRepository
+    // Use Firebase Firestore instead of a Room repository.
+    private lateinit var firestore: FirebaseFirestore
     private val scope = CoroutineScope(Dispatchers.Main + Job())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_game_over)
 
+        // Initialize Firestore instance.
+        firestore = FirebaseFirestore.getInstance()
+
         // Get the score passed via Intent.
         val score = intent.getIntExtra("score", 0)
 
         val scoreTextView = findViewById<TextView>(R.id.scoreTextView)
         scoreTextView.text = "Your Score: $score"
-
-        // Obtain repository from application.
-        //leaderboardRepository = (application as EndlessRunnerApp).leaderboardRepository
 
         val submitButton = findViewById<Button>(R.id.submitScoreButton)
         submitButton.setOnClickListener {
@@ -51,11 +56,22 @@ class GameOverActivity : AppCompatActivity() {
         builder.setPositiveButton("Submit") { dialog, _ ->
             val name = input.text.toString().trim()
             if (name.isNotEmpty()) {
-                scope.launch {
-                    leaderboardRepository.insert(LeaderboardEntry(name = name, score = score))
-                    Toast.makeText(this@GameOverActivity, "Score submitted!", Toast.LENGTH_SHORT).show()
-                    dialog.dismiss()
-                }
+                // Create a new leaderboard entry as a map.
+                val entry = hashMapOf(
+                    "name" to name,
+                    "score" to score,
+                    "timestamp" to System.currentTimeMillis()
+                )
+                // Add the entry to the "leaderboard" collection in Firestore.
+                firestore.collection("leaderboard")
+                    .add(entry)
+                    .addOnSuccessListener {
+                        Toast.makeText(this, "Score submitted!", Toast.LENGTH_SHORT).show()
+                        dialog.dismiss()
+                    }
+                    .addOnFailureListener { e ->
+                        Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
             } else {
                 Toast.makeText(this, "Name cannot be empty", Toast.LENGTH_SHORT).show()
             }

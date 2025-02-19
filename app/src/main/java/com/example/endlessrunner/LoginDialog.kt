@@ -11,7 +11,7 @@ class LoginDialog(private val listener: LoginListener) : DialogFragment() {
 
     interface LoginListener {
         fun onLogin(username: String, password: String)
-        fun onSwitchToRegister()  // NEW: Added method to transition to register
+        fun onSwitchToRegister()  // Called when user wants to register instead
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -22,17 +22,17 @@ class LoginDialog(private val listener: LoginListener) : DialogFragment() {
         val usernameInput = view.findViewById<EditText>(R.id.usernameInput)
         val passwordInput = view.findViewById<EditText>(R.id.passwordInput)
         val loginButton = view.findViewById<Button>(R.id.loginButton)
-        val registerButton = view.findViewById<Button>(R.id.registerButton) // NEW
+        val registerButton = view.findViewById<Button>(R.id.registerButton) // Button to switch to register
 
         loginButton.setOnClickListener {
-            val username = usernameInput.text.toString()
-            val password = passwordInput.text.toString()
+            val username = usernameInput.text.toString().trim()
+            val password = passwordInput.text.toString().trim()
             listener.onLogin(username, password)
             dismiss()
         }
 
-        registerButton.setOnClickListener {  // NEW: Switch to register dialog
-            listener.onSwitchToRegister()
+        registerButton.setOnClickListener {
+            listener.onSwitchToRegister()  // Trigger switch
             dismiss()
         }
 
@@ -40,3 +40,4 @@ class LoginDialog(private val listener: LoginListener) : DialogFragment() {
         return builder.create()
     }
 }
+

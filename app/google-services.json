@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "821731543962",
+    "project_id": "endlessrunner-f63be",
+    "storage_bucket": "endlessrunner-f63be.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:821731543962:android:731ec8b2c5c71b9fc0c823",
+        "android_client_info": {
+          "package_name": "com.example.endlessrunner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "Check telegram pinned"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

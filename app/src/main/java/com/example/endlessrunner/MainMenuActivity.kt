@@ -1,23 +1,40 @@
 package com.example.endlessrunner
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
+import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.bumptech.glide.Glide
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
 
 class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, RegisterDialog.RegisterListener {
 
-    // Firebase Firestore instance
+    // Firebase Firestore and Storage instances
     private lateinit var firestore: FirebaseFirestore
+    private lateinit var storage: FirebaseStorage
+
+    // UI elements for header display (ensure these IDs are defined in your layout)
+    private lateinit var welcomeTextView: TextView
+    private lateinit var profileImageViewMain: ImageView
+    private lateinit var coinsTextView: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main_menu)
 
-        // Initialize Firestore
+        // Initialize Firestore & Storage
         firestore = FirebaseFirestore.getInstance()
+        storage = FirebaseStorage.getInstance()
+
+        // Find header UI elements from layout
+        welcomeTextView = findViewById(R.id.welcomeTextView)
+        profileImageViewMain = findViewById(R.id.profileImageViewMain)
+        coinsTextView = findViewById(R.id.coinsTextView)
 
         // Check if the user is logged in (using SharedPreferences)
         val sharedPrefs = getSharedPreferences("user_prefs", MODE_PRIVATE)
@@ -26,6 +43,7 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
             showLoginDialog()
         } else {
             Toast.makeText(this, "Welcome back, $username!", Toast.LENGTH_SHORT).show()
+            loadUserData(username)  // Fetch user data after a successful login or registration.
         }
 
         val playButton = findViewById<Button>(R.id.playButton)
@@ -55,10 +73,11 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
             showLoginDialog()
         }
     }
+
     override fun onSwitchToRegister() {
-        // Called from LoginDialog when the user chooses to register
         showRegisterDialog()
     }
+
     private fun showLoginDialog() {
         val loginDialog = LoginDialog(this)
         loginDialog.isCancelable = false
@@ -81,6 +100,7 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
                     if (storedHash == HashUtil.hashPassword(password)) {
                         Toast.makeText(this, "Logged in as $username", Toast.LENGTH_SHORT).show()
                         saveUser(username)
+                        loadUserData(username)  // Update header with user data.
                     } else {
                         Toast.makeText(this, "Invalid username or password", Toast.LENGTH_SHORT).show()
                         showLoginDialog()
@@ -96,9 +116,8 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
             }
     }
 
-
-
     // Called when the user registers from the registration dialog.
+    // The imagePath here is already the download URL from Firebase Storage.
     override fun onRegister(username: String, password: String, imagePath: String?) {
         firestore.collection("users").document(username)
             .get()
@@ -119,6 +138,7 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
                         .addOnSuccessListener {
                             Toast.makeText(this, "Registered as $username", Toast.LENGTH_SHORT).show()
                             saveUser(username)
+                            loadUserData(username)  // Fetch data to update header.
                         }
                         .addOnFailureListener { e ->
                             Toast.makeText(this, "Registration failed: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -138,5 +158,30 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
             putString("username", username)
             apply()
         }
+    }
+
+    // This function fetches the user document and updates the header UI.
+    private fun loadUserData(username: String) {
+        firestore.collection("users").document(username)
+            .get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    val profileImageUrl = document.getString("profileImagePath")
+                    val coins = document.getLong("coinsCollected") ?: 0L
+                    welcomeTextView.text = "Welcome $username"
+                    coinsTextView.text = "Coins: $coins"
+                    if (!profileImageUrl.isNullOrEmpty()) {
+                        // Use Glide or any image loader to load the image.
+                        Glide.with(this)
+                            .load(profileImageUrl)
+                            .into(profileImageViewMain)
+                    } else {
+                        profileImageViewMain.setImageResource(R.drawable.ic_launcher_background)
+                    }
+                }
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(this, "Failed to load user data: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
     }
 }

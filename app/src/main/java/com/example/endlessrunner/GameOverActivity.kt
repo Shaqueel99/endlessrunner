@@ -38,10 +38,15 @@ class GameOverActivity : AppCompatActivity() {
             showNameInputDialog(score)
         }
 
+        val restartButton = findViewById<Button>(R.id.restartGame)
+        restartButton.setOnClickListener{
+
+        }
+
         val mainMenuButton = findViewById<Button>(R.id.mainMenuButton)
         mainMenuButton.setOnClickListener {
             // Navigate back to Main Menu.
-            finish()
+
         }
     }
 

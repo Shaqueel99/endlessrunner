@@ -1,6 +1,7 @@
 package com.example.endlessrunner
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -156,7 +157,13 @@ class GameView @JvmOverloads constructor(
         // Reset the game if the runner falls off the bottom.
         if (runnerBody.y > height) {
 
-            resetGame()
+            val intent = Intent(context, GameOverActivity::class.java)
+
+            intent.putExtra("score", score.toInt())
+            context.startActivity(intent)
+
+            // Stop the game loop
+            gameJob?.cancel()
         }
     }
 

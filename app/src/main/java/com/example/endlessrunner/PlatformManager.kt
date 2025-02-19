@@ -20,7 +20,7 @@ class PlatformManager(
 
     init {
         // Create an initial ground platform that spans the bottom.
-        val groundY = viewHeight - groundHeight - platformHeight
+        val groundY = viewHeight - groundHeight - platformHeight - 600
         platforms.add(Platform(0f, groundY, viewWidth.toFloat(), platformHeight))
     }
 
@@ -42,10 +42,10 @@ class PlatformManager(
     }
 
     private fun spawnPlatform() {
-        // Define vertical bounds so platforms appear within a reachable range:
-        // Platforms will be spawned between 400px and 50px above the ground.
-        val minY = viewHeight - groundHeight - 400f
-        val maxY = viewHeight - groundHeight - 50f
+        // Update vertical bounds to spawn platforms higher:
+        // Platforms will now be spawned between 600px and 300px above the ground.
+        val minY = viewHeight - groundHeight - 900f
+        val maxY = viewHeight - groundHeight - 300f
 
         // Find the rightmost platform's right edge.
         val lastPlatform = platforms.maxByOrNull { it.x + it.width }
@@ -55,7 +55,7 @@ class PlatformManager(
         val gap = minHorizontalGap + (Math.random().toFloat() * (maxHorizontalGap - minHorizontalGap))
         val xPos = startX + gap
 
-        // Random vertical position within the new, narrower bounds.
+        // Random vertical position within the new bounds.
         val yPos = minY + (Math.random().toFloat() * (maxY - minY))
 
         // Random platform width between 500 and 700.

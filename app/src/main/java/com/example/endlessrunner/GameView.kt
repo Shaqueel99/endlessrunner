@@ -33,6 +33,7 @@ class GameView @JvmOverloads constructor(
 
     // Runner represented as a PhysicsBody.
     private lateinit var runnerBody: PhysicsBody
+
     private val runnerSize = 100f
 
     // Rotation properties.
@@ -82,6 +83,7 @@ class GameView @JvmOverloads constructor(
 
     private fun startGameLoop() {
         gameJob = CoroutineScope(Dispatchers.Main).launch {
+            runnerBody.y = 300.0f
             while (isActive) {
                 updateGame()
                 invalidate()

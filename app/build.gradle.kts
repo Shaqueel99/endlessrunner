@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.example.endlessrunner"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.endlessrunner"
@@ -44,6 +44,8 @@ android {
 
 dependencies {
     implementation("com.github.bumptech.glide:glide:4.15.1")
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.androidx.constraintlayout)
     kapt("com.github.bumptech.glide:compiler:4.15.1")
     implementation(platform("com.google.firebase:firebase-bom:33.9.0"))
     implementation(libs.androidx.core.ktx)

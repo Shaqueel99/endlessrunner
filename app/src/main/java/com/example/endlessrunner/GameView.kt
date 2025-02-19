@@ -1,6 +1,7 @@
 package com.example.endlessrunner
 
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -10,6 +11,9 @@ import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import android.widget.Toast
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.*
 import kotlin.math.abs
 
@@ -54,7 +58,7 @@ class GameView @JvmOverloads constructor(
 
     // Score and multiplier.
     private var score: Float = 0f
-    private var scoreMultiplier = 1f
+    private var coinscollected = 0
 
     // Coins.
     private val coins = mutableListOf<Coin>()
@@ -90,7 +94,7 @@ class GameView @JvmOverloads constructor(
         if (width == 0) return
 
         // Increase score by multiplier.
-        score += scoreMultiplier
+        score += coinscollected + 1
 
         // Ramp up groundSpeed over time.
         groundSpeed += acceleration
@@ -150,20 +154,50 @@ class GameView @JvmOverloads constructor(
                 runnerBody.y < coin.y + coin.height &&
                 runnerBody.y + runnerBody.height > coin.y) {
                 coinIterator.remove()
-                scoreMultiplier += 0.5f
+                coinscollected += 1
             }
         }
 
-        // Reset the game if the runner falls off the bottom.
         if (runnerBody.y > height) {
+            // Retrieve the logged-in username from SharedPreferences.
+            val sharedPrefs = context.getSharedPreferences("user_prefs", MODE_PRIVATE)
+            val username = sharedPrefs.getString("username", null)
 
-            val intent = Intent(context, GameOverActivity::class.java)
-
-            intent.putExtra("score", score.toInt())
-            context.startActivity(intent)
-
-            // Stop the game loop
-            gameJob?.cancel()
+            if (username != null) {
+                // Get Firestore instance.
+                val firestore = FirebaseFirestore.getInstance()
+                // Update the user's coinsCollected field.
+                firestore.collection("users").document(username)
+                    .get()
+                    .addOnSuccessListener {
+                            document ->
+                        val previousCoins = document.getLong("coinsCollected") ?: 0L
+                        val newTotal = previousCoins + coinscollected
+                        firestore.collection("users").document(username)
+                            .update("coinsCollected", newTotal)
+                        // Now that the coins are updated, launch the GameOverActivity.
+                        val intent = Intent(context, GameOverActivity::class.java)
+                        intent.putExtra("score", score.toInt())
+                        context.startActivity(intent)
+                        // Stop the game loop.
+                        gameJob?.cancel()
+                    }
+                    .addOnFailureListener { e ->
+                        Toast.makeText(context, "Failed to update coins: ${e.message}", Toast.LENGTH_SHORT).show()
+                        // Still launch GameOverActivity even if update fails.
+                        val intent = Intent(context, GameOverActivity::class.java)
+                        intent.putExtra("score", score.toInt())
+                        context.startActivity(intent)
+                        gameJob?.cancel()
+                    }
+            }
+            else {
+                // If username is null, just launch GameOverActivity.
+                val intent = Intent(context, GameOverActivity::class.java)
+                intent.putExtra("score", score.toInt())
+                context.startActivity(intent)
+                gameJob?.cancel()
+            }
         }
     }
 
@@ -178,7 +212,7 @@ class GameView @JvmOverloads constructor(
     private fun resetGame() {
         score = 0f
         groundSpeed = 5f
-        scoreMultiplier = 1f
+        coinscollected = 0
         runnerBody.vx = 0f
         runnerBody.vy = 0f
         runnerRotation = 0f
@@ -197,9 +231,11 @@ class GameView @JvmOverloads constructor(
         val parallaxFactor = 0.5f
         val rawBgOffset = (runnerBody.x - desiredRunnerX) * parallaxFactor
         val bmp = backgroundBitmap
-        if (bmp != null) {
+        if (bmp != null)
+        {
             var effectiveBgOffset = - (rawBgOffset % bmp.width)
-            if (effectiveBgOffset > 0) {
+            if (effectiveBgOffset > 0)
+            {
                 effectiveBgOffset -= bmp.width
             }
             var x = effectiveBgOffset
@@ -207,7 +243,9 @@ class GameView @JvmOverloads constructor(
                 canvas.drawBitmap(bmp, x, 0f, null)
                 x += bmp.width
             }
-        } else {
+        }
+        else
+        {
             canvas.drawColor(Color.LTGRAY)
         }
 
@@ -241,7 +279,7 @@ class GameView @JvmOverloads constructor(
 
         // --- Draw UI Elements ---
         canvas.drawText("Score: ${score.toInt()}", 50f, 100f, textPaint)
-        canvas.drawText("Multiplier: $scoreMultiplier", 50f, 170f, textPaint)
+        canvas.drawText("Coins: ${coinscollected.toInt()}", 50f, 170f, textPaint)
         canvas.drawText("Speed: ${groundSpeed.toInt()}", 50f, 240f, textPaint)
 
     }

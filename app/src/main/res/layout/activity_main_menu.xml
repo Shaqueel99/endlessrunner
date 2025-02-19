@@ -92,6 +92,13 @@
         android:text="Leaderboard" />
 
     <Button
+        android:id="@+id/store"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="STORE" />
+
+    <Button
         android:id="@+id/signOutButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

@@ -14,6 +14,8 @@ import com.google.firebase.storage.FirebaseStorage
 
 class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, RegisterDialog.RegisterListener {
 
+    var profileImageUrl: String? = null
+
     // Firebase Firestore and Storage instances
     private lateinit var firestore: FirebaseFirestore
     private lateinit var storage: FirebaseStorage
@@ -41,9 +43,12 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
         val username = sharedPrefs.getString("username", null)
         if (username == null) {
             showLoginDialog()
-        } else {
+        }
+        else
+        {
             Toast.makeText(this, "Welcome back, $username!", Toast.LENGTH_SHORT).show()
             loadUserData(username)  // Fetch user data after a successful login or registration.
+            saveUser(username,profileImageUrl)
         }
 
         val playButton = findViewById<Button>(R.id.playButton)
@@ -57,8 +62,10 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
         }
 
         leaderboardButton.setOnClickListener {
-            // Open leaderboard (implement as needed)
+            val intent = Intent(this, LeaderboardActivity::class.java)
+            startActivity(intent)
         }
+
 
         quitButton.setOnClickListener {
             finishAffinity()
@@ -99,7 +106,7 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
                     val storedHash = document.getString("hashedPassword") ?: ""
                     if (storedHash == HashUtil.hashPassword(password)) {
                         Toast.makeText(this, "Logged in as $username", Toast.LENGTH_SHORT).show()
-                        saveUser(username)
+                        saveUser(username,profileImageUrl)
                         loadUserData(username)  // Update header with user data.
                     } else {
                         Toast.makeText(this, "Invalid username or password", Toast.LENGTH_SHORT).show()
@@ -125,7 +132,8 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
                 if (document.exists()) {
                     Toast.makeText(this, "Username already exists!", Toast.LENGTH_SHORT).show()
                     showRegisterDialog()
-                } else {
+                }
+                else {
                     val hashedPassword = HashUtil.hashPassword(password)
                     val userData = hashMapOf(
                         "username" to username,
@@ -137,7 +145,7 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
                         .set(userData)
                         .addOnSuccessListener {
                             Toast.makeText(this, "Registered as $username", Toast.LENGTH_SHORT).show()
-                            saveUser(username)
+                            saveUser(username,imagePath)
                             loadUserData(username)  // Fetch data to update header.
                         }
                         .addOnFailureListener { e ->
@@ -152,13 +160,17 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
             }
     }
 
-    private fun saveUser(username: String) {
+    private fun saveUser(username: String, profileImageUrl: String?) {
         val sharedPrefs = getSharedPreferences("user_prefs", MODE_PRIVATE)
         with(sharedPrefs.edit()) {
             putString("username", username)
+            if (profileImageUrl != null) {
+                putString("profileImageUrl", profileImageUrl)
+            }
             apply()
         }
     }
+
 
     // This function fetches the user document and updates the header UI.
     private fun loadUserData(username: String) {
@@ -166,7 +178,7 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
             .get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
-                    val profileImageUrl = document.getString("profileImagePath")
+                    profileImageUrl = document.getString("profileImagePath")
                     val coins = document.getLong("coinsCollected") ?: 0L
                     welcomeTextView.text = "Welcome $username"
                     coinsTextView.text = "Coins: $coins"
@@ -175,7 +187,8 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
                         Glide.with(this)
                             .load(profileImageUrl)
                             .into(profileImageViewMain)
-                    } else {
+                    }
+                    else {
                         profileImageViewMain.setImageResource(R.drawable.ic_launcher_background)
                     }
                 }

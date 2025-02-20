@@ -199,7 +199,6 @@ class GameView @JvmOverloads constructor(
 
         canvas.drawText("Score: ${score.toInt()}", 50f, 100f, textPaint)
         canvas.drawText("Coins: ${coinscollected.toInt()}", 50f, 170f, textPaint)
-        canvas.drawText("Speed: ${squareBody.vx}", 50f, 240f, textPaint)
     }
 
     // **Accelerometer: Update Tilt Control**

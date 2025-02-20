@@ -113,7 +113,8 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
                         Toast.makeText(this, "Logged in as $username", Toast.LENGTH_SHORT).show()
                         saveUser(username,profileImageUrl)
                         loadUserData(username)  // Update header with user data.
-                    } else {
+                    }
+                    else {
                         Toast.makeText(this, "Invalid username or password", Toast.LENGTH_SHORT).show()
                         showLoginDialog()
                     }

@@ -99,7 +99,9 @@ class RegisterDialog(private val listener: RegisterListener) : DialogFragment() 
                     selectedImagePath = downloadUrl
                     profileImageView?.setImageURI(imageUri)
                     Toast.makeText(requireContext(), "Photo captured and uploaded!", Toast.LENGTH_SHORT).show()
-                } else {
+                }
+                else
+                {
                     Toast.makeText(requireContext(), "Failed to upload photo", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -161,7 +163,9 @@ class RegisterDialog(private val listener: RegisterListener) : DialogFragment() 
 
         if (ContextCompat.checkSelfPermission(requireContext(), permission) == PackageManager.PERMISSION_GRANTED) {
             openGallery()
-        } else {
+        }
+        else
+        {
             galleryPermissionLauncher.launch(permission)
         }
     }
@@ -176,7 +180,9 @@ class RegisterDialog(private val listener: RegisterListener) : DialogFragment() 
                         selectedImagePath = downloadUrl
                         profileImageView?.setImageURI(galleryUri)
                         Toast.makeText(requireContext(), "Image selected and uploaded!", Toast.LENGTH_SHORT).show()
-                    } else {
+                    }
+                    else
+                    {
                         Toast.makeText(requireContext(), "Failed to upload image", Toast.LENGTH_SHORT).show()
                     }
                 }

@@ -4,6 +4,7 @@ import android.app.Dialog
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 
@@ -11,7 +12,7 @@ class LoginDialog(private val listener: LoginListener) : DialogFragment() {
 
     interface LoginListener {
         fun onLogin(username: String, password: String)
-        fun onSwitchToRegister()  // Called when user wants to register instead
+        fun onSwitchToRegister()
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -22,17 +23,24 @@ class LoginDialog(private val listener: LoginListener) : DialogFragment() {
         val usernameInput = view.findViewById<EditText>(R.id.usernameInput)
         val passwordInput = view.findViewById<EditText>(R.id.passwordInput)
         val loginButton = view.findViewById<Button>(R.id.loginButton)
-        val registerButton = view.findViewById<Button>(R.id.registerButton) // Button to switch to register
+        val registerButton = view.findViewById<Button>(R.id.registerButton)
 
         loginButton.setOnClickListener {
             val username = usernameInput.text.toString().trim()
             val password = passwordInput.text.toString().trim()
-            listener.onLogin(username, password)
-            dismiss()
+
+            // Basic validation: ensure username and password are not empty
+            if (username.isEmpty() || password.isEmpty()) {
+                Toast.makeText(requireContext(), "Please enter both username and password.", Toast.LENGTH_SHORT).show()
+            } else {
+                // If valid, pass the data to the listener and dismiss
+                listener.onLogin(username, password)
+                dismiss()
+            }
         }
 
         registerButton.setOnClickListener {
-            listener.onSwitchToRegister()  // Trigger switch
+            listener.onSwitchToRegister()
             dismiss()
         }
 
@@ -40,4 +48,3 @@ class LoginDialog(private val listener: LoginListener) : DialogFragment() {
         return builder.create()
     }
 }
-

@@ -1,7 +1,6 @@
 package com.example.endlessrunner
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
 import android.widget.ImageView
@@ -56,6 +55,11 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
         val quitButton = findViewById<Button>(R.id.quitButton)
         val signOutButton = findViewById<Button>(R.id.signOutButton)
         val storeButton = findViewById<Button>(R.id.store)
+
+        profileImageViewMain.setOnClickListener {
+            val intent = Intent(this, ProfileActivity::class.java)
+            startActivity(intent)
+        }
 
         playButton.setOnClickListener {
             val intent = Intent(this, MainActivity::class.java)

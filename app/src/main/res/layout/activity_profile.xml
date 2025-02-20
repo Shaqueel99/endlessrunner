@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mainMenuContainer"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/desertnight_0"
+    android:backgroundTint="#F2070707"
+    android:backgroundTintMode="src_atop"
+    android:foreground="@drawable/desertnight_5">
+
+    <Button
+        android:id="@+id/backProfileButton"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:text="BACK"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/imageProfileView"
+        android:layout_width="143dp"
+        android:layout_height="167dp"
+        android:layout_marginTop="36dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.492"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_launcher_background" />
+
+    <TextView
+        android:id="@+id/nameProfileText"
+        android:layout_width="136dp"
+        android:layout_height="83dp"
+        android:fontFamily="sans-serif"
+        android:lineSpacingExtra="20sp"
+        android:textAlignment="center"
+        android:textAllCaps="false"
+        android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:typeface="normal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/imageProfileView"
+        app:layout_constraintVertical_bias="0.031"
+        tools:text="Player" />
+
+    <TextView
+        android:id="@+id/coinProfileText"
+        android:layout_width="84dp"
+        android:layout_height="46dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:fontFamily="sans-serif"
+        android:lineSpacingExtra="8sp"
+        android:text="Coins: 0"
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+        android:textColor="@android:color/holo_orange_light"
+        android:textSize="16sp"
+        android:typeface="normal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/changePhotoProfileButton"
+        android:layout_width="277dp"
+        android:layout_height="55dp"
+        android:text="Change Photo"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/nameProfileText"
+        app:layout_constraintVertical_bias="0.082" />
+
+    <Button
+        android:id="@+id/changeNameProfileButton"
+        android:layout_width="277dp"
+        android:layout_height="55dp"
+        android:layout_marginTop="56dp"
+        android:text="Change Name"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/changePhotoProfileButton" />
+
+    <Button
+        android:id="@+id/changePasswordProfileButton"
+        android:layout_width="277dp"
+        android:layout_height="55dp"
+        android:layout_marginTop="16dp"
+        android:text="Change Password"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/changeNameProfileButton"
+        app:layout_constraintVertical_bias="0.205" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

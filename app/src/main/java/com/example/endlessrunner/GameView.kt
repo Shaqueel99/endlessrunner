@@ -61,6 +61,8 @@ class GameView @JvmOverloads constructor(
     private var tiltControl = 0f   // Updated from accelerometer
     private var touchControl = 0f  // Updated from touch events
 
+    private val boostJumpVelocity = -100f //
+
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         loadEquippedSkinFromFirebase()
@@ -184,6 +186,15 @@ class GameView @JvmOverloads constructor(
             }
         }
 
+        //  Apply Boost Jump Immediately Upon Collection
+        platformManager?.boosts?.removeIf { boost ->
+            if (CollisionUtils.isCollidingWithBoost(squareBody, boost)) { // Use new function
+                squareBody.vy = boostJumpVelocity // Instant boost effect
+                true // Remove boost after collection
+            } else {
+                false
+            }
+        }
 
         // Game Over Condition.
         if (squareBody.y > height) {
@@ -237,6 +248,11 @@ class GameView @JvmOverloads constructor(
         paint.color = Color.YELLOW
         platformManager?.coins?.forEach { coin ->
             canvas.drawCircle(coin.x + coin.size / 2, coin.y + coin.size / 2, coin.size / 2, paint)
+        }
+        
+        paint.color = Color.CYAN
+        platformManager?.boosts?.forEach { boost ->
+            canvas.drawOval(boost.x, boost.y, boost.x + boost.size, boost.y + boost.size, paint)
         }
 
         val playerBitmap = when (equippedSkinFromFirebase) {

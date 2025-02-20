@@ -3,348 +3,240 @@ package com.example.endlessrunner
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Toast
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.*
-import kotlin.math.abs
-
-// Data class to represent a coin.
-data class Coin(var x: Float, var y: Float, val width: Float, val height: Float)
 
 class GameView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyle: Int = 0
-) : View(context, attrs, defStyle) {
+) : View(context, attrs, defStyle), SensorEventListener {
 
     private val paint = Paint()
     private val textPaint = Paint().apply {
-        color = Color.WHITE
+        color = Color.BLACK
         textSize = 60f
         isAntiAlias = true
     }
 
-    // Runner represented as a PhysicsBody.
-    private lateinit var runnerBody: PhysicsBody
-
-    private val runnerSize = 100f
-
-    // Rotation properties.
-    private var runnerRotation = 0f
-    private var flipSpeed = 0f
+    // Physics body for the player.
+    private lateinit var squareBody: PhysicsBody
+    private var coinscollected = 0
 
     // Physics parameters.
     private val gravity = 2f
-    private val jumpVelocity = -40f
+    private val jumpVelocity = -60f
+    private var scrollThreshold = 100f // Vertical scroll threshold
 
-    // Variable jump parameters.
-    private var isJumping = false
-
-    // Ground properties.
-    var groundSpeed = 5f
-    // Acceleration to increase groundSpeed over time.
-    private val acceleration = 0.0025f
-    val groundHeight = 150f
-    private var groundBitmap: Bitmap? = null
-
-    // Background properties.
-    private var backgroundBitmap: Bitmap? = null
-
-    // Score and multiplier.
+    // Score based on height reached.
     private var score: Float = 0f
-    private var coinscollected = 0
-
-    // Coins.
-    private val coins = mutableListOf<Coin>()
-    // Chance to spawn a coin on a platform (e.g., 1% chance per update).
-    private val coinChance = 0.001
-    private val coinSize = 40f
 
     // Platform Manager.
     private var platformManager: PlatformManager? = null
 
-    // Coroutine job for game loop.
+    // Game loop coroutine.
     private var gameJob: Job? = null
 
-    // Desired runner screen x position.
-    private val desiredRunnerX = 200f
+    // **Accelerometer Setup**
+    private val sensorManager: SensorManager =
+        context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    private var accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    private var tiltSensitivity = 4.0f // Adjust to make movement smoother/slower
+
+    // **Control Inputs from Tilt and Touch**
+    private var tiltControl = 0f   // Updated from accelerometer
+    private var touchControl = 0f  // Updated from touch events
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         startGameLoop()
-    }
-
-    private fun startGameLoop() {
-        gameJob = CoroutineScope(Dispatchers.Main).launch {
-            runnerBody.y = 300.0f
-            while (isActive) {
-                updateGame()
-                invalidate()
-                delay(16L)  // Approximately 60 FPS.
-            }
-        }
-    }
-
-    private fun updateGame() {
-        if (width == 0) return
-
-        // Increase score by multiplier.
-        score += coinscollected + 1
-
-        // Ramp up groundSpeed over time.
-        groundSpeed += acceleration
-        flipSpeed = groundSpeed
-        // Update runner's world position horizontally.
-        runnerBody.x += groundSpeed
-
-        // Update platforms using the current groundSpeed.
-        platformManager?.update(groundSpeed)
-
-        // Spawn coins on platforms if not already present.
-        platformManager?.platforms?.forEach { platform ->
-            // Simple check: if no coin exists on this platform (by x overlap).
-            if (coins.none { coin -> coin.x >= platform.x && coin.x <= platform.x + platform.width }) {
-                if (Math.random() < coinChance) {
-                    spawnCoinOnPlatform(platform)
-                }
-            }
-        }
-
-        // Update coins: move them left along with the world.
-        coins.forEach { it.x -= groundSpeed }
-        coins.removeAll { it.x + it.width < 0 }
-
-        // Apply gravity.
-        runnerBody.vy += gravity
-        runnerBody.y += runnerBody.vy
-
-        // Update runner rotation (flip) when airborne.
-        if (abs(runnerBody.vy) > 0.0f) {
-            runnerRotation += flipSpeed
-        } else {
-            runnerRotation = 0f
-        }
-
-        // Check collisions with each platform.
-        platformManager?.platforms?.forEach { platform ->
-            val platformBody = PhysicsBody(
-                x = platform.x,
-                y = platform.y,
-                width = platform.width,
-                height = platform.height,
-                vx = 0f,
-                vy = 0f
-            )
-            if (aabbCollision(runnerBody, platformBody)) {
-                resolveCollision(runnerBody, platformBody)
-            }
-        }
-
-        // Check collision with coins.
-        val coinIterator = coins.iterator()
-        while (coinIterator.hasNext()) {
-            val coin = coinIterator.next()
-            if (runnerBody.x < coin.x + coin.width &&
-                runnerBody.x + runnerBody.width > coin.x &&
-                runnerBody.y < coin.y + coin.height &&
-                runnerBody.y + runnerBody.height > coin.y) {
-                coinIterator.remove()
-                coinscollected += 1
-            }
-        }
-
-        if (runnerBody.y > height) {
-            // Retrieve the logged-in username from SharedPreferences.
-            val sharedPrefs = context.getSharedPreferences("user_prefs", MODE_PRIVATE)
-            val username = sharedPrefs.getString("username", null)
-
-            if (username != null) {
-                // Get Firestore instance.
-                val firestore = FirebaseFirestore.getInstance()
-                // Update the user's coinsCollected field.
-                firestore.collection("users").document(username)
-                    .get()
-                    .addOnSuccessListener {
-                            document ->
-                        val previousCoins = document.getLong("coinsCollected") ?: 0L
-                        val newTotal = previousCoins + coinscollected
-                        firestore.collection("users").document(username)
-                            .update("coinsCollected", newTotal)
-                        // Now that the coins are updated, launch the GameOverActivity.
-                        val intent = Intent(context, GameOverActivity::class.java)
-                        intent.putExtra("score", score.toInt())
-                        context.startActivity(intent)
-                        // Stop the game loop.
-                        gameJob?.cancel()
-                    }
-                    .addOnFailureListener { e ->
-                        Toast.makeText(context, "Failed to update coins: ${e.message}", Toast.LENGTH_SHORT).show()
-                        // Still launch GameOverActivity even if update fails.
-                        val intent = Intent(context, GameOverActivity::class.java)
-                        intent.putExtra("score", score.toInt())
-                        context.startActivity(intent)
-                        gameJob?.cancel()
-                    }
-            }
-            else {
-                // If username is null, just launch GameOverActivity.
-                val intent = Intent(context, GameOverActivity::class.java)
-                intent.putExtra("score", score.toInt())
-                context.startActivity(intent)
-                gameJob?.cancel()
-            }
-        }
-    }
-
-    private fun spawnCoinOnPlatform(platform: Platform) {
-        // Randomize coin's x coordinate so it sits randomly on the platform.
-        val coinX = platform.x + (Math.random().toFloat() * (platform.width - coinSize))
-        // Place the coin 20px higher above the platform.
-        val coinY = platform.y - coinSize - 20f
-        coins.add(Coin(coinX, coinY, coinSize, coinSize))
-    }
-
-    private fun resetGame() {
-        score = 0f
-        groundSpeed = 5f
-        coinscollected = 0
-        runnerBody.vx = 0f
-        runnerBody.vy = 0f
-        runnerRotation = 0f
-        runnerBody.x = 200f
-        runnerBody.y = height - groundHeight - runnerBody.height - 200f
-        platformManager?.platforms?.clear()
-        platformManager = PlatformManager(width, height, groundHeight, groundSpeed)
-        coins.clear()
-        isJumping = false
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-
-        // --- Draw Background with Parallax ---
-        val parallaxFactor = 0.5f
-        val rawBgOffset = (runnerBody.x - desiredRunnerX) * parallaxFactor
-        val bmp = backgroundBitmap
-        if (bmp != null)
-        {
-            var effectiveBgOffset = - (rawBgOffset % bmp.width)
-            if (effectiveBgOffset > 0)
-            {
-                effectiveBgOffset -= bmp.width
-            }
-            var x = effectiveBgOffset
-            while (x < width) {
-                canvas.drawBitmap(bmp, x, 0f, null)
-                x += bmp.width
-            }
-        }
-        else
-        {
-            canvas.drawColor(Color.LTGRAY)
-        }
-
-        // --- Draw World Elements with Camera Translation ---
-        val cameraOffsetX = runnerBody.x - desiredRunnerX
-        canvas.save()
-        canvas.translate(-cameraOffsetX, 0f)
-
-        // Draw platforms.
-        paint.color = Color.DKGRAY
-        platformManager?.platforms?.forEach { platform ->
-            canvas.drawRect(platform.x, platform.y, platform.x + platform.width, platform.y + platform.height, paint)
-        }
-
-        // Draw coins.
-        paint.color = Color.YELLOW
-        coins.forEach { coin ->
-            canvas.drawOval(coin.x, coin.y, coin.x + coin.width, coin.y + coin.height, paint)
-        }
-
-        // Draw runner with rotation.
-        canvas.save()
-        val runnerCenterX = runnerBody.x + runnerBody.width / 2
-        val runnerCenterY = runnerBody.y + runnerBody.height / 2
-        canvas.rotate(runnerRotation, runnerCenterX, runnerCenterY)
-        paint.color = Color.BLUE
-        canvas.drawRect(runnerBody.x, runnerBody.y, runnerBody.x + runnerBody.width, runnerBody.y + runnerBody.height, paint)
-        canvas.restore()
-
-        canvas.restore()
-
-        // --- Draw UI Elements ---
-        canvas.drawText("Score: ${score.toInt()}", 50f, 100f, textPaint)
-        canvas.drawText("Coins: ${coinscollected.toInt()}", 50f, 170f, textPaint)
-        canvas.drawText("Speed: ${groundSpeed.toInt()}", 50f, 240f, textPaint)
-
+        accelerometer?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
     }
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         gameJob?.cancel()
+        sensorManager.unregisterListener(this) // Stop listening to accelerometer
     }
+
+    private fun startGameLoop() {
+        gameJob = CoroutineScope(Dispatchers.Main).launch {
+            while (isActive) {
+                updateGame()
+                invalidate()
+                delay(16L) // ~60 FPS.
+            }
+        }
+    }
+
+    private fun updateGame() {
+        if (width == 0 || height == 0) return
+
+        // Update squareBody.vx as the sum of tilt and touch inputs.
+        squareBody.vx = tiltControl * tiltSensitivity + touchControl
+        squareBody.x += squareBody.vx
+
+        val prevBottom = squareBody.y + squareBody.height
+        squareBody.vy += gravity
+        squareBody.y += squareBody.vy
+        val newBottom = squareBody.y + squareBody.height
+        var offset = 0f
+
+        if (squareBody.y < scrollThreshold) {
+            offset = scrollThreshold - squareBody.y
+            squareBody.y = scrollThreshold
+            score += offset
+        }
+
+        platformManager?.update(offset, score)
+
+        // Wrap-around screen horizontally.
+        if (squareBody.x > width) {
+            squareBody.x = 0f
+        } else if (squareBody.x + squareBody.width < 0) {
+            squareBody.x = width - squareBody.width
+        }
+
+        // Check collision with platforms.
+        if (squareBody.vy > 0) {
+            platformManager?.platforms?.toList()?.forEach { platform ->
+                if (platform.y in prevBottom..newBottom) {
+                    val horizontalOverlap = squareBody.x + squareBody.width > platform.x &&
+                            squareBody.x < platform.x + platform.width
+                    if (horizontalOverlap) {
+                        if (platform.isBreakable) {
+                            platformManager?.platforms?.remove(platform)
+                        }
+                        squareBody.y = platform.y - squareBody.height
+                        squareBody.vy = jumpVelocity
+                    }
+                }
+            }
+        }
+
+        // Check collision with coins.
+        platformManager?.coins?.removeIf { coin ->
+            val overlapsHorizontally = squareBody.x + squareBody.width > coin.x &&
+                    squareBody.x < coin.x + coin.size
+            val overlapsVertically = squareBody.y + squareBody.height > coin.y &&
+                    squareBody.y < coin.y + coin.size
+
+            if (overlapsHorizontally && overlapsVertically) {
+                coinscollected += 1
+                true
+            } else {
+                false
+            }
+        }
+
+        // Game Over Condition.
+        if (squareBody.y > height) {
+            val sharedPrefs = context.getSharedPreferences("user_prefs", MODE_PRIVATE)
+            val username = sharedPrefs.getString("username", null)
+
+            if (username != null) {
+                val firestore = FirebaseFirestore.getInstance()
+                firestore.collection("users").document(username)
+                    .get()
+                    .addOnSuccessListener { document ->
+                        val previousCoins = document.getLong("coinsCollected") ?: 0L
+                        val newTotal = previousCoins + coinscollected
+                        firestore.collection("users").document(username)
+                            .update("coinsCollected", newTotal)
+                            .addOnSuccessListener {
+                                Log.d("Firestore", "Coins updated successfully: $newTotal")
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e("Firestore", "Failed to update coins: ${e.message}")
+                                Toast.makeText(context, "Failed to update coins.", Toast.LENGTH_SHORT).show()
+                            }
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("Firestore", "Failed to retrieve user data: ${e.message}")
+                        Toast.makeText(context, "Error retrieving user data.", Toast.LENGTH_SHORT).show()
+                    }
+            }
+
+            gameJob?.cancel()
+            Toast.makeText(context, "Game Over! Score: ${score.toInt()}", Toast.LENGTH_LONG).show()
+
+            val intent = Intent(context, GameOverActivity::class.java)
+            intent.putExtra("score", score.toInt())
+            context.startActivity(intent)
+        }
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        canvas.drawColor(Color.LTGRAY)
+
+        platformManager?.platforms?.forEach { platform ->
+            when {
+                platform.isBreakable -> paint.color = Color.RED
+                platform.isMoving -> paint.color = Color.rgb(34, 139, 34)
+                else -> paint.color = Color.DKGRAY
+            }
+            canvas.drawRect(platform.x, platform.y, platform.x + platform.width, platform.y + platform.height, paint)
+        }
+
+        paint.color = Color.YELLOW
+        platformManager?.coins?.forEach { coin ->
+            canvas.drawCircle(coin.x + coin.size / 2, coin.y + coin.size / 2, coin.size / 2, paint)
+        }
+
+        paint.color = Color.BLUE
+        canvas.drawRect(squareBody.x, squareBody.y, squareBody.x + squareBody.width, squareBody.y + squareBody.height, paint)
+
+        canvas.drawText("Score: ${score.toInt()}", 50f, 100f, textPaint)
+        canvas.drawText("Coins: ${coinscollected.toInt()}", 50f, 170f, textPaint)
+        canvas.drawText("Speed: ${squareBody.vx}", 50f, 240f, textPaint)
+    }
+
+    // **Accelerometer: Update Tilt Control**
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
+            // Log sensor values for debugging.
+            Log.d("Sensor", "Accelerometer: x=${event.values[0]}, y=${event.values[1]}, z=${event.values[2]}")
+            // Try using values[0] or values[1] depending on your device orientation.
+            // In this case, we use values[0] and invert it.
+            tiltControl = -event.values[0]*2.0f
+        }
+    }
+
+    // **Touch Control: Update Touch Control Value**
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        event?.let {
+            when (it.action) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                    // Calculate touch control based on touch position relative to center.
+                    val touchX = it.x
+                    val centerX = width / 2f
+                    touchControl = (touchX - centerX) / 20f
+                }
+                MotionEvent.ACTION_UP -> {
+                    touchControl = 0f
+                }
+            }
+        }
+        return true
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        val startY = h - groundHeight - runnerSize - 200f
-        runnerBody = PhysicsBody(
-            x = 200f,
-            y = startY,
-            width = runnerSize,
-            height = runnerSize,
-            vx = 0f,
-            vy = 0f,
-            mass = 1f,
-            restitution = 0.0f
-        )
-        platformManager = PlatformManager(w, h, groundHeight, groundSpeed)
-
-        // Load and scale background image.
-        backgroundBitmap = BitmapFactory.decodeResource(resources, R.drawable.desertnight_0)
-        backgroundBitmap?.let { bmp ->
-            val scale = h.toFloat() / bmp.height
-            val newWidth = (bmp.width * scale).toInt()
-            backgroundBitmap = Bitmap.createScaledBitmap(bmp, newWidth, h, true)
-        }
-
-        // Load and scale ground image.
-        groundBitmap = BitmapFactory.decodeResource(resources, R.drawable.desertnight_4)
-        groundBitmap?.let { bmp ->
-            val scale = groundHeight / bmp.height.toFloat()
-            val newWidth = (bmp.width * scale).toInt()
-            groundBitmap = Bitmap.createScaledBitmap(bmp, newWidth, groundHeight.toInt(), true)
-        }
-    }
-
-    override fun onTouchEvent(event: MotionEvent?): Boolean {
-        when (event?.action) {
-            MotionEvent.ACTION_DOWN -> {
-                if (runnerBody.vy == 0f) {
-                    isJumping = true
-                    runnerBody.vy = jumpVelocity * 1.25f
-                }
-                performClick()
-                return true
-            }
-            MotionEvent.ACTION_UP -> {
-                if (isJumping && runnerBody.vy < 0f) {
-                    runnerBody.vy *= 0.5f
-                }
-                isJumping = false
-            }
-        }
-        return super.onTouchEvent(event)
-    }
-
-    override fun performClick(): Boolean {
-        super.performClick()
-        return true
+        squareBody = PhysicsBody((w - 80f) / 2f, h - 180f, 80f, 80f, 0f, jumpVelocity)
+        scrollThreshold = h / 3f
+        platformManager = PlatformManager(w, h)
     }
 }

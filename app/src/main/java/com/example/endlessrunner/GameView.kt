@@ -103,41 +103,35 @@ class GameView @JvmOverloads constructor(
         // Wrap-around screen horizontally.
         if (squareBody.x > width) {
             squareBody.x = 0f
-        } else if (squareBody.x + squareBody.width < 0) {
+        }
+        else if (squareBody.x + squareBody.width < 0) {
             squareBody.x = width - squareBody.width
         }
 
         // Check collision with platforms.
         if (squareBody.vy > 0) {
             platformManager?.platforms?.toList()?.forEach { platform ->
-                if (platform.y in prevBottom..newBottom) {
-                    val horizontalOverlap = squareBody.x + squareBody.width > platform.x &&
-                            squareBody.x < platform.x + platform.width
-                    if (horizontalOverlap) {
-                        if (platform.isBreakable) {
-                            platformManager?.platforms?.remove(platform)
-                        }
-                        squareBody.y = platform.y - squareBody.height
-                        squareBody.vy = jumpVelocity
+                if (CollisionUtils.isCollidingWithPlatform(squareBody, platform, prevBottom, newBottom)) {
+                    if (platform.isBreakable) {
+                        platformManager?.platforms?.remove(platform)
                     }
+                    squareBody.y = platform.y - squareBody.height
+                    squareBody.vy = jumpVelocity
                 }
             }
         }
 
         // Check collision with coins.
         platformManager?.coins?.removeIf { coin ->
-            val overlapsHorizontally = squareBody.x + squareBody.width > coin.x &&
-                    squareBody.x < coin.x + coin.size
-            val overlapsVertically = squareBody.y + squareBody.height > coin.y &&
-                    squareBody.y < coin.y + coin.size
-
-            if (overlapsHorizontally && overlapsVertically) {
+            if (CollisionUtils.isCollidingWithCoin(squareBody, coin)) {
                 coinscollected += 1
                 true
-            } else {
+            }
+            else {
                 false
             }
         }
+
 
         // Game Over Condition.
         if (squareBody.y > height) {
@@ -166,10 +160,9 @@ class GameView @JvmOverloads constructor(
                         Toast.makeText(context, "Error retrieving user data.", Toast.LENGTH_SHORT).show()
                     }
             }
-
+            //Transition to Game Over screen
             gameJob?.cancel()
             Toast.makeText(context, "Game Over! Score: ${score.toInt()}", Toast.LENGTH_LONG).show()
-
             val intent = Intent(context, GameOverActivity::class.java)
             intent.putExtra("score", score.toInt())
             context.startActivity(intent)
@@ -204,11 +197,7 @@ class GameView @JvmOverloads constructor(
     // **Accelerometer: Update Tilt Control**
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
-            // Log sensor values for debugging.
-            Log.d("Sensor", "Accelerometer: x=${event.values[0]}, y=${event.values[1]}, z=${event.values[2]}")
-            // Try using values[0] or values[1] depending on your device orientation.
-            // In this case, we use values[0] and invert it.
-            tiltControl = -event.values[0]*2.0f
+            tiltControl = -event.values[0] * 2.0f
         }
     }
 
@@ -217,7 +206,6 @@ class GameView @JvmOverloads constructor(
         event?.let {
             when (it.action) {
                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                    // Calculate touch control based on touch position relative to center.
                     val touchX = it.x
                     val centerX = width / 2f
                     touchControl = (touchX - centerX) / 20f

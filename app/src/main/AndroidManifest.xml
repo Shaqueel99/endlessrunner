@@ -40,7 +40,7 @@
         <activity android:name=".GameOverActivity" />
         <activity android:name=".MainActivity" />
         <activity android:name=".LeaderboardActivity" />
-
+        <activity android:name=".StoreActivity"/>
 
     </application>
 </manifest>

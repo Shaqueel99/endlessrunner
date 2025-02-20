@@ -55,6 +55,7 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
         val leaderboardButton = findViewById<Button>(R.id.leaderboardButton)
         val quitButton = findViewById<Button>(R.id.quitButton)
         val signOutButton = findViewById<Button>(R.id.signOutButton)
+        val storeButton = findViewById<Button>(R.id.store)
 
         playButton.setOnClickListener {
             val intent = Intent(this, MainActivity::class.java)
@@ -66,6 +67,10 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
             startActivity(intent)
         }
 
+        storeButton.setOnClickListener{
+            val intent = Intent(this, StoreActivity::class.java)
+            startActivity(intent)
+        }
 
         quitButton.setOnClickListener {
             finishAffinity()

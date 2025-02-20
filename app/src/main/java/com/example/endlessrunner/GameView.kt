@@ -3,6 +3,7 @@ package com.example.endlessrunner
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -15,6 +16,7 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Toast
+import com.bumptech.glide.Glide
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.*
 
@@ -28,6 +30,8 @@ class GameView @JvmOverloads constructor(
         textSize = 60f
         isAntiAlias = true
     }
+    private var equippedSkinFromFirebase: String = "default"
+    private var profileSkinBitmap: Bitmap? = null
 
     // Physics body for the player.
     private lateinit var squareBody: PhysicsBody
@@ -59,6 +63,8 @@ class GameView @JvmOverloads constructor(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        loadEquippedSkinFromFirebase()
+
         startGameLoop()
         accelerometer?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) }
     }
@@ -68,7 +74,53 @@ class GameView @JvmOverloads constructor(
         gameJob?.cancel()
         sensorManager.unregisterListener(this) // Stop listening to accelerometer
     }
+    private fun loadEquippedSkinFromFirebase() {
+        val sharedPrefs = context.getSharedPreferences("user_prefs", MODE_PRIVATE)
+        val username = sharedPrefs.getString("username", null)
+        if (username != null) {
+            val firestore = FirebaseFirestore.getInstance()
+            firestore.collection("users").document(username)
+                .get()
+                .addOnSuccessListener { document ->
+                    if (document.exists()) {
+                        equippedSkinFromFirebase = document.getString("equippedSkin") ?: "default"
+                        if (equippedSkinFromFirebase == "profile") {
+                            val profileImageUrl = document.getString("profileImagePath") ?: ""
+                            if (profileImageUrl.isNotEmpty()) {
+                                // Load the image off the main thread using Glide.
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    try {
+                                        val bitmap = Glide.with(context)
+                                            .asBitmap()
+                                            .load(profileImageUrl)
+                                            .submit()
+                                            .get()
+                                        profileSkinBitmap = Bitmap.createScaledBitmap(bitmap!!, squareBody.width.toInt(), squareBody.width.toInt(), false)
 
+
+                                        withContext(Dispatchers.Main) {
+                                            invalidate()
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("GameView", "Failed to load profile image: ${e.message}")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                .addOnFailureListener { e ->
+                    Toast.makeText(context, "Failed to load skin: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+        }
+    }
+    private fun createColorSquare(color: Int, size: Int): Bitmap {
+        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        val p = Paint().apply { this.color = color }
+        canvas.drawRect(0f, 0f, size.toFloat(), size.toFloat(), p)
+        return bmp
+    }
     private fun startGameLoop() {
         gameJob = CoroutineScope(Dispatchers.Main).launch {
             while (isActive) {
@@ -187,11 +239,24 @@ class GameView @JvmOverloads constructor(
             canvas.drawCircle(coin.x + coin.size / 2, coin.y + coin.size / 2, coin.size / 2, paint)
         }
 
-        paint.color = Color.BLUE
-        canvas.drawRect(squareBody.x, squareBody.y, squareBody.x + squareBody.width, squareBody.y + squareBody.height, paint)
+        val playerBitmap = when (equippedSkinFromFirebase) {
+            "red" -> createColorSquare(Color.RED, squareBody.width.toInt())
+            "green" -> createColorSquare(Color.GREEN, squareBody.width.toInt())
+            "profile" -> {
+                if (profileSkinBitmap != null) {
+                    profileSkinBitmap ?: createColorSquare(Color.MAGENTA, squareBody.width.toInt())
+                }
+                else {
+                    createColorSquare(Color.MAGENTA, squareBody.width.toInt())
+                }
+            }
+            else -> createColorSquare(Color.BLUE, squareBody.width.toInt())
+        }
 
+        // Draw player.
+        canvas.drawBitmap(playerBitmap, squareBody.x, squareBody.y, paint)
         canvas.drawText("Score: ${score.toInt()}", 50f, 100f, textPaint)
-        canvas.drawText("Coins: ${coinscollected.toInt()}", 50f, 170f, textPaint)
+        canvas.drawText("Coins: ${coinscollected}", 50f, 170f, textPaint)
     }
 
     // **Accelerometer: Update Tilt Control**

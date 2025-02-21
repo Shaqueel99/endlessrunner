@@ -19,6 +19,13 @@ object CollisionUtils {
         return overlapsHorizontally && overlapsVertically
     }
 
+    fun isCollidingWithBoost(player: PhysicsBody, boost: Boost): Boolean {
+        val dx = (player.x + player.width / 2) - (boost.x + boost.size / 2)
+        val dy = (player.y + player.height / 2) - (boost.y + boost.size / 2)
+        val distance = kotlin.math.sqrt(dx * dx + dy * dy)
+
+        return distance < (boost.size / 2) + (player.width / 3) // Increased hitbox size for easier collision
+    }
 
     fun resolveCollision(dynamic: PhysicsBody, static: PhysicsBody) {
         // Calculate overlap distances in both axes.

@@ -16,12 +16,19 @@ data class Coin(
     val size: Float = 30f // Coin size
 )
 
+data class Boost(
+    var x: Float,
+    var y: Float,
+    val size: Float = 40f // Boost size
+)
+
 class PlatformManager(
     private val viewWidth: Int,
     private val viewHeight: Int
 ) {
     val platforms = mutableListOf<Platform>()
     val coins = mutableListOf<Coin>() // Store all coins
+    val boosts = mutableListOf<Boost>()
 
     private val platformWidth = 150f
     private val platformHeight = 20f
@@ -49,6 +56,10 @@ class PlatformManager(
         return Random.nextFloat() < 0.1f // 10% chance to spawn a coin
     }
 
+    private fun shouldSpawnBoost(): Boolean {
+        return Random.nextFloat() < 0.03f // 3% chance to spawn a boost
+    }
+
     private fun generateSpeed(): Float {
         return 5f + Random.nextFloat() * 5f
     }
@@ -69,6 +80,13 @@ class PlatformManager(
                 val coinX = platform.x + (platform.width - 30f) / 2 // Center the coin
                 val coinY = platform.y - 35f // Place coin slightly above platform
                 coins.add(Coin(coinX, coinY))
+            }
+
+            // **Spawn Boost Above Some Platforms (3% Chance)**
+            if (shouldSpawnBoost()) { // 3% chance to spawn a boost
+                val boostX = platform.x + (platform.width - 40f) / 2 // Center boost on platform
+                val boostY = platform.y - 60f // Position slightly above platform
+                boosts.add(Boost(boostX, boostY))
             }
 
             currentY -= baseMinGap + Random.nextFloat() * (baseMaxGap - baseMinGap)
@@ -98,8 +116,13 @@ class PlatformManager(
             coins[i] = coin.copy(y = coin.y + offset)
         }
 
+        boosts.forEachIndexed { i, boost ->
+            boosts[i] = boost.copy(y = boost.y + offset)
+        }
+
         platforms.removeAll { it.y > viewHeight }
         coins.removeAll { it.y > viewHeight } // Remove off-screen coins
+        boosts.removeAll { it.y > viewHeight } // Remove off-screen boosts
 
         val requiredPlatforms = minPlatformCount(score)
         var highestY = platforms.minByOrNull { it.y }?.y ?: viewHeight.toFloat()
@@ -121,6 +144,12 @@ class PlatformManager(
                 val coinX = platform.x + (platform.width - 30f) / 2
                 val coinY = platform.y - 35f
                 coins.add(Coin(coinX, coinY))
+            }
+
+            if (shouldSpawnBoost()) {
+                val boostX = platform.x + (platform.width - 40f) / 2
+                val boostY = platform.y - 50f
+                boosts.add(Boost(boostX, boostY))
             }
 
             highestY = platforms.minByOrNull { it.y }?.y ?: newY

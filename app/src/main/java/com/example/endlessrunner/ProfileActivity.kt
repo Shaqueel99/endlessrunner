@@ -11,6 +11,7 @@
     import android.widget.Button
     import android.widget.EditText
     import android.widget.ImageView
+    import android.widget.LinearLayout
     import android.widget.TextView
     import android.widget.Toast
     import androidx.activity.result.contract.ActivityResultContracts
@@ -123,19 +124,19 @@
 
                 // Validate the new name
                 if (newName.isEmpty()) {
-                    Toast.makeText(this, "Name cannot be empty", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Invalid username! Name cannot be empty", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
                 // Validate the new name
                 if (!isValidUsername(newName)) {
-                    Toast.makeText(this, "Name is not valid", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Invalid username! Use 3-15 letters/numbers.", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
 
                 // Check if the name exists in the database
                 checkIfNameExists(newName) { exists ->
                     if (exists) {
-                        Toast.makeText(this, "Name already exists", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "Invalid username! Name already exists", Toast.LENGTH_SHORT).show()
                     } else {
                         // Update the name in the database
                         updateNameInDatabase(newName)
@@ -245,7 +246,7 @@
                     Toast.makeText(this, "Name updated successfully to $newName", Toast.LENGTH_SHORT).show()
                 }
                 .addOnFailureListener { e ->
-                    Toast.makeText(this, "Error updating name in firebase: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Error updating name: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
             // Update shared preference
@@ -263,7 +264,100 @@
         }
 
         private fun showChangePasswordDialog() {
-            TODO("Not yet implemented")
+            // Create a LinearLayout to hold the EditText fields
+            val layout = LinearLayout(this)
+            layout.orientation = LinearLayout.VERTICAL
+
+            // Create the EditText fields
+            val oldPasswordEditText = EditText(this)
+            oldPasswordEditText.hint = "Enter old password"
+            oldPasswordEditText.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+
+            val newPasswordEditText = EditText(this)
+            newPasswordEditText.hint = "Enter new password"
+            newPasswordEditText.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+
+            val confirmPasswordEditText = EditText(this)
+            confirmPasswordEditText.hint = "Confirm new password"
+            confirmPasswordEditText.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+
+            // Add EditText fields to the LinearLayout
+            layout.addView(oldPasswordEditText)
+            layout.addView(newPasswordEditText)
+            layout.addView(confirmPasswordEditText)
+
+            // Set up an alert dialog
+            val dialog = AlertDialog.Builder(this)
+                .setTitle("Change Password")
+                .setView(layout) // Set the LinearLayout with the EditText fields
+                .setPositiveButton("Change") {
+                                             dialogInterface, i ->
+                    val oldPassword = oldPasswordEditText.text.toString()
+                    val newPassword = newPasswordEditText.text.toString()
+                    val newPassword2 = confirmPasswordEditText.text.toString()
+
+                    // Check if password from database is correct
+                    // Get Current user's data from database
+                    val sharedPrefs = getSharedPreferences("user_prefs", MODE_PRIVATE)
+                    val username = sharedPrefs.getString("username", null)
+                    firestore.collection("users").whereEqualTo("username", username)
+                        .get()
+                        .addOnSuccessListener {
+                                documents ->
+                            val document = documents.firstOrNull()  // Get the first matching document
+                            if (document != null) {
+                                // get the whole entry
+                                firestore.collection("users").document(document.id)
+                                    .get()
+                                    .addOnSuccessListener { userDocument ->
+                                        // get password from current entry
+                                        val password = userDocument.getString("hashedPassword")
+                                        if (password != null)
+                                        {
+                                            // check if password is correct and new password valid
+                                            if(password == HashUtil.hashPassword(oldPassword) &&
+                                                isValidPassword(newPassword) &&
+                                                newPassword2 == newPassword)
+                                            {
+                                                // update database
+                                                firestore.collection("users").document(document.id)
+                                                    // Change password
+                                                    .update("hashedPassword", HashUtil.hashPassword(newPassword))
+                                                    .addOnSuccessListener {
+                                                        Toast.makeText(this, "Password successfully changed", Toast.LENGTH_SHORT).show()
+                                                    }
+                                            }
+                                            else
+                                            {
+                                                // issue correct error message
+                                                if(password != HashUtil.hashPassword(oldPassword))
+                                                    Toast.makeText(this, "Incorrect old password", Toast.LENGTH_SHORT).show()
+                                                if(!isValidPassword(newPassword))
+                                                    Toast.makeText(this, "Invalid new password! Use 6-20 characters, 1 digit, 1 letter.", Toast.LENGTH_SHORT).show()
+                                                if(newPassword2 != newPassword)
+                                                    Toast.makeText(this, "Invalid new password! Both are different.", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // Password doesn't exist or is null
+                                            println("Password not found.")
+                                        }
+                                    }
+                                    .addOnFailureListener { exception ->
+                                        Toast.makeText(
+                                            this,
+                                            "Failed to obtained entry: ${exception.message}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                            }
+                        }
+                }
+                .setNegativeButton("Cancel", null)
+                .create()
+
+            dialog.show()
         }
 
         private fun showImageSelectionDialog() {

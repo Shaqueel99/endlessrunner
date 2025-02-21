@@ -59,11 +59,13 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
         profileImageViewMain.setOnClickListener {
             val intent = Intent(this, ProfileActivity::class.java)
             startActivity(intent)
+            finish()
         }
 
         playButton.setOnClickListener {
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
+            finish()
         }
 
         leaderboardButton.setOnClickListener {
@@ -108,10 +110,13 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
 
     // Called when the user logs in from the login dialog.
     override fun onLogin(username: String, password: String) {
-        firestore.collection("users").document(username)
+        //firestore.collection("users").document(username)
+        firestore.collection("users").whereEqualTo("username", username)
             .get()
-            .addOnSuccessListener { document ->
-                if (document.exists()) {
+            .addOnSuccessListener {
+                    documents ->
+                val document = documents.firstOrNull()  // Get the first matching document
+                if (document != null) {
                     val storedHash = document.getString("hashedPassword") ?: ""
                     if (storedHash == HashUtil.hashPassword(password)) {
                         Toast.makeText(this, "Logged in as $username", Toast.LENGTH_SHORT).show()
@@ -184,10 +189,13 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
 
     // This function fetches the user document and updates the header UI.
     private fun loadUserData(username: String) {
-        firestore.collection("users").document(username)
+        //firestore.collection("users").document(username)
+        firestore.collection("users").whereEqualTo("username", username)
             .get()
-            .addOnSuccessListener { document ->
-                if (document.exists()) {
+            .addOnSuccessListener {
+                    documents ->
+                val document = documents.firstOrNull()  // Get the first matching document
+                if (document != null) {
                     profileImageUrl = document.getString("profileImagePath")
                     val coins = document.getLong("coinsCollected") ?: 0L
                     welcomeTextView.text = "Welcome $username"
@@ -198,9 +206,7 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
                             .load(profileImageUrl)
                             .into(profileImageViewMain)
                     }
-                    else {
-                        profileImageViewMain.setImageResource(R.drawable.ic_launcher_background)
-                    }
+                    else   {profileImageViewMain.setImageResource(R.drawable.ic_launcher_background)}
                 }
             }
             .addOnFailureListener { e ->

@@ -7,11 +7,13 @@
     import android.os.Environment
     import android.provider.MediaStore
     import android.text.InputType
+    import android.util.Log
     import android.widget.Button
     import android.widget.EditText
     import android.widget.ImageView
     import android.widget.TextView
     import android.widget.Toast
+    import androidx.activity.result.contract.ActivityResultContracts
     import androidx.appcompat.app.AlertDialog
     import androidx.appcompat.app.AppCompatActivity
     import androidx.core.content.FileProvider
@@ -55,10 +57,12 @@
 
             // Retrieve from Database
             if (username != null) {
-                firestore.collection("users").document(username)
+                firestore.collection("users").whereEqualTo("username", username)
                     .get()
-                    .addOnSuccessListener { document ->
-                        if (document.exists()) {
+                    .addOnSuccessListener {
+                            documents ->
+                        val document = documents.firstOrNull()  // Get the first matching document
+                        if (document != null) {
                             // Name
                             nameTextView.text = "$username"
 
@@ -87,26 +91,22 @@
 
             // Change Name
             findViewById<Button>(R.id.changeNameProfileButton).setOnClickListener {
-                //showChangeNameDialog()
+                showChangeNameDialog()
             }
 
             // Change Password
             findViewById<Button>(R.id.changePasswordProfileButton).setOnClickListener {
-                //showChangePasswordDialog()
+                showChangePasswordDialog()
             }
 
             // Back Button
             findViewById<Button>(R.id.backProfileButton).setOnClickListener {
-                with(sharedPrefs.edit()) {
-                    putString("username", username)
-                    if (profileImageUrl != null) {
-                        putString("profileImageUrl", profileImageUrl)
-                    }
-                    apply()
-                }
+                val intent = Intent(this, MainMenuActivity::class.java)
+                startActivity(intent)
                 finish()  // Returns to the previous screen
             }
         }
+
         private fun showChangeNameDialog() {
             // Create an AlertDialog for input
             val builder = AlertDialog.Builder(this)
@@ -145,7 +145,6 @@
 
             // Set up "Cancel" button action
             builder.setNegativeButton("Cancel", null)
-
             // Show the dialog
             builder.show()
         }
@@ -171,20 +170,46 @@
             val sharedPrefs = getSharedPreferences("user_prefs", MODE_PRIVATE)
             val username = sharedPrefs.getString("username", null)
 
-            val database = FirebaseFirestore.getInstance()
-            if(username!= null){
-            val userRef = database.collection("users").document(username)
-            userRef.update("username", newName)
-                .addOnSuccessListener {
-                    // Name
+            if(username!= null)
+            {
+                    // Change name
+                    firestore.collection("users").whereEqualTo("username", username)
+                        .get()
+                        .addOnSuccessListener {
+                                documents ->
+                                    val document = documents.firstOrNull()  // Get the first matching document
+                                    if (document != null) {
+                                        firestore.collection("users").document(document.id)
+                                            .update("username", newName)
+                                            .addOnSuccessListener {
+                                                Toast.makeText(
+                                                    this,
+                                                    "username updated to $newName",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                            .addOnFailureListener { exception ->
+                                                Toast.makeText(
+                                                    this,
+                                                    "Failed to update name in users: ${exception.message}",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                    } else {
+                                        Toast.makeText(
+                                            this,
+                                            "No document found for username $username",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
 
                     // Set leaderboard
                     firestore.collection("leaderboard")
                         .whereEqualTo("name", username) // Find the correct document
                         .get()
-                        .addOnSuccessListener {
-                                documents ->
-                            for (document in documents) {
+                        .addOnSuccessListener { documents ->
+                            val document = documents.firstOrNull()  // Get the first matching document
+                            if (document != null) {
                                 firestore.collection("leaderboard").document(document.id)
                                     .update("name", newName)
                                     .addOnSuccessListener {
@@ -201,6 +226,12 @@
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
+                            } else {
+                                Toast.makeText(
+                                    this,
+                                    "No document found for username $username",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }
                         .addOnFailureListener {
@@ -211,16 +242,24 @@
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
-                    Toast.makeText(this, "Name updated successfully", Toast.LENGTH_SHORT).show()
-                    with(sharedPrefs.edit()) {
-                        putString("username", newName)
-                        apply()
-                    }
+                    Toast.makeText(this, "Name updated successfully to $newName", Toast.LENGTH_SHORT).show()
                 }
                 .addOnFailureListener { e ->
                     Toast.makeText(this, "Error updating name in firebase: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
+            // Update shared preference
+
+            val editor = sharedPrefs.edit()
+            editor.putString("username", newName)  // Update username with newName
+            editor.apply()
+            val test = sharedPrefs.getString("username",null)
+            if(test != null)
+            {
+                Log.d("share pref name: ",test)
+            }
+            Log.d("New name: ",newName)
+            nameTextView.text = newName
         }
 
         private fun showChangePasswordDialog() {
@@ -246,20 +285,20 @@
         private var imageUri: Uri? = null
 
         private fun openCamera() {
-            val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-            if (intent.resolveActivity(packageManager) != null) {
-                val photoFile: File? = createImageFile()
-                if (photoFile != null) {
-                    imageUri = FileProvider.getUriForFile(
-                        this,
-                        "${applicationContext.packageName}.provider",
-                        photoFile
-                    )
-                    intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri)
-                    startActivityForResult(intent, REQUEST_IMAGE_CAPTURE)
+            val photoFile: File? = createImageFile()
+            if (photoFile != null) {
+                imageUri = FileProvider.getUriForFile(
+                    this,
+                    "${applicationContext.packageName}.provider",
+                    photoFile
+                )
+
+                val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                    putExtra(MediaStore.EXTRA_OUTPUT, imageUri)
                 }
+                startActivityForResult(intent, REQUEST_IMAGE_CAPTURE)
             } else {
-                Toast.makeText(this, "No camera app found", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Unable to create image file", Toast.LENGTH_SHORT).show()
             }
         }
 

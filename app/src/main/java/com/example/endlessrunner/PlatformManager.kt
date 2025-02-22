@@ -2,25 +2,27 @@ package com.example.endlessrunner
 
 import kotlin.random.Random
 
+// Added 'spawnLevel' to record which image set to use.
 data class Platform(
     var x: Float, var y: Float,
     val width: Float, val height: Float,
-    var isBreakable: Boolean = false, // Some platforms will disappear
-    var isMoving: Boolean = false,      // Some platforms will move
-    var direction: Int = 1,             // Movement direction (-1 left, 1 right)
-    var speed: Float = 0f               // Speed of movement
+    var isBreakable: Boolean = false,
+    var isMoving: Boolean = false,
+    var direction: Int = 1,
+    var speed: Float = 0f,
+    val spawnLevel: Int = 1  // 1 = level1 images, 2 = level2 images, 3 = level3 images
 )
 
 data class Coin(
     var x: Float,
     var y: Float,
-    val size: Float = 30f // Coin size
+    val size: Float = 30f
 )
 
 data class Boost(
     var x: Float,
     var y: Float,
-    val size: Float = 40f // Boost size
+    val size: Float = 40f
 )
 
 class PlatformManager(
@@ -28,7 +30,7 @@ class PlatformManager(
     private val viewHeight: Int
 ) {
     val platforms = mutableListOf<Platform>()
-    val coins = mutableListOf<Coin>()   // Store all coins
+    val coins = mutableListOf<Coin>()
     val boosts = mutableListOf<Boost>()
 
     private val platformWidth = 150f
@@ -36,12 +38,15 @@ class PlatformManager(
     private val baseMinGap = 100f
     private val baseMaxGap = 200f
 
-    // Adjust total platform count based on score/level.
-    // Level 1: calculated from score; Level 2: fixed at 5; Level 3: fixed at 3.
+    private fun difficultyMultiplier(score: Float): Float {
+        return 1f + score / 300f
+    }
+
+    // Fewer platforms spawn as levels increase.
     private fun minPlatformCount(score: Float): Int {
         return when {
-            score >= 40000 -> 3  // Level 3: spawn fewer platforms
-            score >= 10000 -> 5   // Level 2: spawn fewer platforms than Level 1
+            score >= 40000 -> 3  // Level 3
+            score >= 10000 -> 5   // Level 2
             else -> {
                 val count = 10 - (score / 300).toInt()
                 count.coerceAtLeast(2)
@@ -49,47 +54,49 @@ class PlatformManager(
         }
     }
 
-    // Increase chance for moving platforms in Level 2/3.
     private fun shouldBeMoving(score: Float): Boolean {
-        // Use 50% chance if score is at least 5000 (Level 2 and 3); otherwise 30%.
-        val chance = if (score >= 10000) 0.5f else 0.1f
+        val chance =
+            if (score >= 40000) { 1.0f }
+        else if(score >= 10000) { 0.5f }
+        else { 0.3f }
+
         return score > 500 && Random.nextFloat() < chance
     }
 
-    // Increase chance for breakable platforms in Level 2/3.
     private fun shouldBeBreakable(score: Float): Boolean {
-        // Use 50% chance if score is at least 5000; otherwise 20%.
-        val chance = if (score >= 10000) 0.5f else 0.0f
+        val chance =
+            if (score >= 40000) { 0.7f }
+            else if(score >= 15000) { 0.3f }
+            else { 0.1f }
         return score > 800 && Random.nextFloat() < chance
     }
 
     private fun shouldSpawnCoin(): Boolean {
-        return Random.nextFloat() < 0.1f // 10% chance to spawn a coin
+        return Random.nextFloat() < 0.1f
     }
 
     private fun shouldSpawnBoost(): Boolean {
-        return Random.nextFloat() < 0.03f // 3% chance to spawn a boost
+        return Random.nextFloat() < 0.03f
     }
 
-    // Increase moving platform speed for level 2/3.
     private fun generateSpeed(score: Float): Float {
         val base = 5f + Random.nextFloat() * 5f
-        return if (score >= 20000) base * 2.0f else base
+        return if (score >= 40000) base * 1.5f else base
     }
 
     init {
         var currentY = viewHeight - 100f
+        // Initial platforms spawn at level 1.
         while (currentY > 0) {
             val xPos = Random.nextFloat() * (viewWidth - platformWidth)
-            // At initialization score is 0 so these will be false most of the time.
             val isMoving = shouldBeMoving(0.0f)
             val isBreakable = shouldBeBreakable(0.0f)
             val speed = if (isMoving) generateSpeed(0.0f) else 0f
 
-            val platform = Platform(xPos, currentY, platformWidth, platformHeight, isBreakable, isMoving, 1, speed)
+            val platform = Platform(xPos, currentY, platformWidth, platformHeight, isBreakable, isMoving, 1, speed, spawnLevel = 1)
             platforms.add(platform)
 
-            // Decide which bonus to spawn (if any) for this platform.
+            // Spawn coin/boost exclusively.
             val spawnCoin = shouldSpawnCoin()
             val spawnBoost = shouldSpawnBoost()
             if (spawnCoin && spawnBoost) {
@@ -117,7 +124,7 @@ class PlatformManager(
     }
 
     fun update(offset: Float, score: Float) {
-        val difficulty = 1f + score / 300f
+        val difficulty = difficultyMultiplier(score)
         val minGap = baseMinGap * difficulty
         val maxGap = baseMaxGap * difficulty
 
@@ -131,7 +138,6 @@ class PlatformManager(
             }
         }
 
-        // Scroll all platforms, coins, and boosts downward.
         platforms.forEachIndexed { i, platform ->
             platforms[i] = platform.copy(y = platform.y + offset)
         }
@@ -142,7 +148,6 @@ class PlatformManager(
             boosts[i] = boost.copy(y = boost.y + offset)
         }
 
-        // Remove any items that have scrolled off the screen.
         platforms.removeAll { it.y > viewHeight }
         coins.removeAll { it.y > viewHeight }
         boosts.removeAll { it.y > viewHeight }
@@ -150,20 +155,24 @@ class PlatformManager(
         val requiredPlatforms = minPlatformCount(score)
         var highestY = platforms.minByOrNull { it.y }?.y ?: viewHeight.toFloat()
 
-        // Generate new platforms until we have enough or until the highest platform is sufficiently high.
+        // New platforms are spawned with a spawnLevel that depends on the current score.
         while (platforms.size < requiredPlatforms || highestY > 150f) {
             val gap = minGap + Random.nextFloat() * (maxGap - minGap)
             val newY = (highestY - gap).coerceAtLeast(0f)
             val newX = Random.nextFloat() * (viewWidth - platformWidth)
-
             val isMoving = shouldBeMoving(score)
             val isBreakable = shouldBeBreakable(score)
             val speed = if (isMoving) generateSpeed(score) else 0f
 
-            val platform = Platform(newX, newY, platformWidth, platformHeight, isBreakable, isMoving, 1, speed)
+            val spawnLevel = when {
+                score < 10000f -> 1
+                score >= 10000f && score < 40000f -> 2
+                else -> 3
+            }
+
+            val platform = Platform(newX, newY, platformWidth, platformHeight, isBreakable, isMoving, 1, speed, spawnLevel = spawnLevel)
             platforms.add(platform)
 
-            // Decide which bonus to spawn (if any) for this new platform.
             val spawnCoin = shouldSpawnCoin()
             val spawnBoost = shouldSpawnBoost()
             if (spawnCoin && spawnBoost) {

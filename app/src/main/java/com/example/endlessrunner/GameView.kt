@@ -28,6 +28,7 @@ class GameView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyle: Int = 0
 ) : View(context, attrs, defStyle), SensorEventListener {
 
+
     // Paints
     private val paint = Paint()
     private val textPaint = Paint().apply {
@@ -52,6 +53,17 @@ class GameView @JvmOverloads constructor(
     private var platformBitmap: Bitmap? = null
     private var movingPlatformBitmap: Bitmap? = null
     private var breakablePlatformBitmap: Bitmap? = null
+
+    private var platformBitmap2: Bitmap? = null
+    private var movingPlatformBitmap2: Bitmap? = null
+    private var breakablePlatformBitmap2: Bitmap? = null
+
+
+    private var platformBitmap3: Bitmap? = null
+    private var movingPlatformBitmap3: Bitmap? = null
+    private var breakablePlatformBitmap3: Bitmap? = null
+
+
     private var backgroundOffset = 0f
     private var transitionBackgroundAdded = false
     private var transitionBackgroundAddedLevel3 = false     // for level 3 (bg4 then bg5)
@@ -171,6 +183,15 @@ class GameView @JvmOverloads constructor(
         platformBitmap = BitmapFactory.decodeResource(resources, R.drawable.platform1)
         movingPlatformBitmap = BitmapFactory.decodeResource(resources, R.drawable.movingplatform1)
         breakablePlatformBitmap = BitmapFactory.decodeResource(resources, R.drawable.breakableplatform1)
+
+        platformBitmap2 = BitmapFactory.decodeResource(resources, R.drawable.platform2)
+        movingPlatformBitmap2 = BitmapFactory.decodeResource(resources, R.drawable.movingplatform2)
+        breakablePlatformBitmap2 = BitmapFactory.decodeResource(resources, R.drawable.breakableplatform2)
+
+
+        platformBitmap3 = BitmapFactory.decodeResource(resources, R.drawable.platform3)
+        movingPlatformBitmap3 = BitmapFactory.decodeResource(resources, R.drawable.movingplatform3)
+        breakablePlatformBitmap3 = BitmapFactory.decodeResource(resources, R.drawable.breakableplatform3)
     }
     private fun manageBackgroundQueue() {
         if (backgroundQueue.isEmpty()) return
@@ -295,6 +316,37 @@ class GameView @JvmOverloads constructor(
         }
     }
 
+    private fun drawPlatforms(canvas: Canvas) {
+        platformManager?.platforms?.forEach { platform ->
+            val bmp: Bitmap? = when (platform.spawnLevel) {
+                1 -> when {
+                    platform.isBreakable -> breakablePlatformBitmap
+                    platform.isMoving -> movingPlatformBitmap
+                    else -> platformBitmap
+                }
+                2 -> when {
+                    platform.isBreakable -> breakablePlatformBitmap2
+                    platform.isMoving -> movingPlatformBitmap2
+                    else -> platformBitmap2
+                }
+                3 -> when {
+                    platform.isBreakable -> breakablePlatformBitmap3
+                    platform.isMoving -> movingPlatformBitmap3
+                    else -> platformBitmap3
+                }
+                else -> platformBitmap
+            }
+            bmp?.let {
+                platformRect.set(
+                    platform.x,
+                    platform.y,
+                    platform.x + platform.width,
+                    platform.y + platform.height
+                )
+                canvas.drawBitmap(it, null, platformRect, null)
+            }
+        }
+    }
 
 
     private fun checkScreenWrap() {
@@ -383,24 +435,7 @@ class GameView @JvmOverloads constructor(
 
 
 
-    private fun drawPlatforms(canvas: Canvas) {
-        platformManager?.platforms?.forEach { platform ->
-            val bmp: Bitmap? = when {
-                platform.isBreakable -> breakablePlatformBitmap
-                platform.isMoving -> movingPlatformBitmap
-                else -> platformBitmap
-            }
-            bmp?.let {
-                platformRect.set(
-                    platform.x,
-                    platform.y,
-                    platform.x + platform.width,
-                    platform.y + platform.height
-                )
-                canvas.drawBitmap(it, null, platformRect, null)
-            }
-        }
-    }
+
 
     private fun drawCoins(canvas: Canvas) {
         paint.color = Color.YELLOW

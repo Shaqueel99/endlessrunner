@@ -1,117 +1,127 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/mainMenuContainer"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/frameContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg1"
-    android:backgroundTint="#C93A3939"
-    android:backgroundTintMode="src_over"
-    android:foreground="@color/black"
-    android:foregroundTint="#00000000"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:background="#FFFFFF"
+    android:backgroundTint="#000000">
 
-    <!-- Header: contains welcome message with profile image on left and coin count on right -->
-    <LinearLayout
-        android:id="@+id/headerContainer"
+    <!-- Scrolling background view (it handles drawing bg1 infinitely) -->
+    <com.example.endlessrunner.ScrollingBackgroundView
+        android:id="@+id/scrollingBackgroundView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingBottom="16dp">
+        android:layout_height="match_parent" />
 
-        <!-- Left Side: Profile Image + Welcome Text -->
+    <!-- Main Menu Container -->
+    <LinearLayout
+        android:id="@+id/mainMenuContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:backgroundTint="#C93A3939"
+        android:backgroundTintMode="src_over"
+        android:foreground="@color/black"
+        android:foregroundTint="#00000000"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- Header: contains welcome message with profile image on left and coin count on right -->
         <LinearLayout
-            android:id="@+id/leftHeader"
-            android:layout_width="309dp"
-            android:layout_height="136dp"
-            android:layout_weight="1"
-            android:gravity="start|center_vertical"
-            android:orientation="vertical">
+            android:id="@+id/headerContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingBottom="16dp">
 
-            <ImageView
-                android:id="@+id/profileImageViewMain"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_marginEnd="8dp"
-                android:scaleType="centerCrop"
-                android:src="@drawable/ic_launcher_background" />
+            <!-- Left Side: Profile Image + Welcome Text -->
+            <LinearLayout
+                android:id="@+id/leftHeader"
+                android:layout_width="309dp"
+                android:layout_height="136dp"
+                android:layout_weight="1"
+                android:gravity="start|center_vertical"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/welcomeTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@android:color/white"
-                android:textSize="18sp" />
+                <ImageView
+                    android:id="@+id/profileImageViewMain"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="8dp"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_launcher_background" />
 
-            <TextView
-                android:id="@+id/coinsTextView"
-                android:layout_width="364dp"
-                android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:lineSpacingExtra="8sp"
-                android:text="Coins: 0"
-                android:textAlignment="center"
-                android:textColor="@android:color/holo_orange_light"
-                android:textSize="16sp"
-                android:typeface="normal" />
+                <TextView
+                    android:id="@+id/welcomeTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@android:color/white"
+                    android:textSize="18sp" />
 
+                <TextView
+                    android:id="@+id/coinsTextView"
+                    android:layout_width="364dp"
+                    android:layout_height="wrap_content"
+                    android:lineSpacingExtra="8sp"
+                    android:text="Coins: 0"
+                    android:textAlignment="center"
+                    android:textColor="@android:color/holo_orange_light"
+                    android:textSize="16sp"
+                    android:typeface="normal" />
+
+            </LinearLayout>
         </LinearLayout>
 
-        <!-- Right Side: Coin Count -->
+        <!-- Title Section -->
+        <TextView
+            android:id="@+id/titleText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="48dp"
+            android:lineSpacingExtra="8sp"
+            android:text="Square - Scramble"
+            android:textAlignment="center"
+            android:textAllCaps="true"
+            android:textColor="@android:color/white"
+            android:textColorHighlight="#000000"
+            android:textDirection="firstStrongRtl"
+            android:textSize="36sp"
+            android:textStyle="bold" />
+
+        <!-- Menu Buttons -->
+        <Button
+            android:id="@+id/playButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Play" />
+
+        <Button
+            android:id="@+id/leaderboardButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Leaderboard" />
+
+        <Button
+            android:id="@+id/store"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="STORE" />
+
+        <Button
+            android:id="@+id/signOutButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Sign Out" />
+
+        <Button
+            android:id="@+id/quitButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Quit" />
+
     </LinearLayout>
 
-    <!-- Title Section -->
-
-    <!-- Menu Buttons -->
-
-    <TextView
-        android:id="@+id/titleText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="48dp"
-        android:lineSpacingExtra="8sp"
-        android:text="Square - Scramble"
-        android:textAlignment="center"
-        android:textAllCaps="true"
-        android:textColor="@android:color/white"
-        android:textColorHighlight="#000000"
-        android:textDirection="firstStrongRtl"
-        android:textSize="36sp"
-        android:textStyle="bold" />
-
-    <Button
-        android:id="@+id/playButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Play" />
-
-    <Button
-        android:id="@+id/leaderboardButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Leaderboard" />
-
-    <Button
-        android:id="@+id/store"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="STORE" />
-
-    <Button
-        android:id="@+id/signOutButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Sign Out" />
-
-    <Button
-        android:id="@+id/quitButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Quit" />
-
-</LinearLayout>
+</FrameLayout>

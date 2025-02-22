@@ -5,10 +5,9 @@
     android:id="@+id/mainMenuContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/desertnight_0"
-    android:backgroundTint="#F2070707"
-    android:backgroundTintMode="src_atop"
-    android:foreground="@drawable/desertnight_5">
+    android:background="@drawable/bg6"
+    android:backgroundTint="#873E3B3B"
+    android:backgroundTintMode="src_atop">
 
     <Button
         android:id="@+id/backProfileButton"

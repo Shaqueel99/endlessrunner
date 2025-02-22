@@ -3,10 +3,11 @@
     android:id="@+id/mainMenuContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/desertnight_0"
-    android:backgroundTint="#F2070707"
-    android:backgroundTintMode="src_atop"
-    android:foreground="@drawable/desertnight_5"
+    android:background="@drawable/bg1"
+    android:backgroundTint="#C93A3939"
+    android:backgroundTintMode="src_over"
+    android:foreground="@color/black"
+    android:foregroundTint="#00000000"
     android:orientation="vertical"
     android:padding="24dp">
 
@@ -74,6 +75,7 @@
         android:textAlignment="center"
         android:textAllCaps="true"
         android:textColor="@android:color/white"
+        android:textColorHighlight="#000000"
         android:textDirection="firstStrongRtl"
         android:textSize="36sp"
         android:textStyle="bold" />

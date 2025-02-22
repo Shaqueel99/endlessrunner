@@ -5,7 +5,9 @@
     android:id="@+id/storeLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000"
+    android:background="@drawable/bg3"
+    android:backgroundTint="#9C050505"
+    android:backgroundTintMode="src_atop"
     android:padding="16dp">
 
     <!-- Coin count display at the top -->

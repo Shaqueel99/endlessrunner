@@ -4,9 +4,12 @@ import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -19,23 +22,32 @@ import android.widget.Toast
 import com.bumptech.glide.Glide
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.*
-
+import android.graphics.RectF
 class GameView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyle: Int = 0
 ) : View(context, attrs, defStyle), SensorEventListener {
 
     private val paint = Paint()
     private val textPaint = Paint().apply {
-        color = Color.BLACK
-        textSize = 60f
+        color = Color.WHITE
+        style = Paint.Style.FILL
         isAntiAlias = true
+        textSize = 60f
+        // Set shadow: radius, x-offset, y-offset, shadow color.
+        setShadowLayer(8f, 0f, 0f, Color.BLACK)
     }
     private var equippedSkinFromFirebase: String = "default"
     private var profileSkinBitmap: Bitmap? = null
+    private var backgroundOffset = 0f
+    private var backgroundBitmap: Bitmap? = null
+    private var platformBitmap: Bitmap? = null
+    private var movingPlatformBitmap: Bitmap? = null
+    private var breakablePlatformBitmap: Bitmap? = null
 
     // Physics body for the player.
     private lateinit var squareBody: PhysicsBody
     private var coinscollected = 0
+    private val platformRect = RectF()
 
     // Physics parameters.
     private val gravity = 2f
@@ -50,6 +62,9 @@ class GameView @JvmOverloads constructor(
 
     // Game loop coroutine.
     private var gameJob: Job? = null
+    val tintedPaint = Paint().apply {
+        colorFilter = PorterDuffColorFilter(Color.argb(100, 0, 0, 0), PorterDuff.Mode.DARKEN)
+    }
 
     // **Accelerometer Setup**
     private val sensorManager: SensorManager =
@@ -150,6 +165,8 @@ class GameView @JvmOverloads constructor(
             offset = scrollThreshold - squareBody.y
             squareBody.y = scrollThreshold
             score += offset
+            // Update background offset; using a multiplier (e.g., 0.5f) for a parallax effect
+            backgroundOffset += offset * 0.5f  // Adjust multiplier as needed for parallax effect.
         }
 
         platformManager?.update(offset, score)
@@ -234,22 +251,37 @@ class GameView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        canvas.drawColor(Color.LTGRAY)
 
-        platformManager?.platforms?.forEach { platform ->
-            when {
-                platform.isBreakable -> paint.color = Color.RED
-                platform.isMoving -> paint.color = Color.rgb(34, 139, 34)
-                else -> paint.color = Color.DKGRAY
+        backgroundBitmap?.let { bg ->
+            val bgHeight = bg.height.toFloat()
+            val yOffset = ((backgroundOffset % bgHeight) + bgHeight) % bgHeight
+
+            canvas.drawBitmap(bg, 0f, yOffset, tintedPaint)
+            if (yOffset > 0) {
+                canvas.drawBitmap(bg, 0f, yOffset - bgHeight, tintedPaint)
             }
-            canvas.drawRect(platform.x, platform.y, platform.x + platform.width, platform.y + platform.height, paint)
+        } ?: canvas.drawColor(Color.LTGRAY)
+
+        // Draw platforms using bitmaps.
+        platformManager?.platforms?.forEach { platform ->
+            val bmp: Bitmap? = when {
+                platform.isBreakable -> breakablePlatformBitmap
+                platform.isMoving -> movingPlatformBitmap
+                else -> platformBitmap
+            }
+            bmp?.let {
+                // Reuse the preallocated RectF to avoid object allocations.
+                platformRect.set(platform.x, platform.y, platform.x + platform.width, platform.y + platform.height)
+                canvas.drawBitmap(it, null, platformRect, null)
+            }
         }
+
 
         paint.color = Color.YELLOW
         platformManager?.coins?.forEach { coin ->
             canvas.drawCircle(coin.x + coin.size / 2, coin.y + coin.size / 2, coin.size / 2, paint)
         }
-        
+
         paint.color = Color.CYAN
         platformManager?.boosts?.forEach { boost ->
             canvas.drawOval(boost.x, boost.y, boost.x + boost.size, boost.y + boost.size, paint)
@@ -261,8 +293,7 @@ class GameView @JvmOverloads constructor(
             "profile" -> {
                 if (profileSkinBitmap != null) {
                     profileSkinBitmap ?: createColorSquare(Color.MAGENTA, squareBody.width.toInt())
-                }
-                else {
+                } else {
                     createColorSquare(Color.MAGENTA, squareBody.width.toInt())
                 }
             }
@@ -272,8 +303,10 @@ class GameView @JvmOverloads constructor(
         // Draw player.
         canvas.drawBitmap(playerBitmap, squareBody.x, squareBody.y, paint)
         canvas.drawText("Score: ${score.toInt()}", 50f, 100f, textPaint)
-        canvas.drawText("Coins: ${coinscollected}", 50f, 170f, textPaint)
+        canvas.drawText("Coins: $coinscollected", 50f, 170f, textPaint)
     }
+
+
 
     // **Accelerometer: Update Tilt Control**
     override fun onSensorChanged(event: SensorEvent?) {
@@ -306,5 +339,12 @@ class GameView @JvmOverloads constructor(
         squareBody = PhysicsBody((w - 80f) / 2f, h - 180f, 80f, 80f, 0f, jumpVelocity)
         scrollThreshold = h / 3f
         platformManager = PlatformManager(w, h)
+
+        // Load the background image and scale it to the view's width if needed
+        backgroundBitmap = BitmapFactory.decodeResource(resources, R.drawable.bg1)
+        platformBitmap = BitmapFactory.decodeResource(resources, R.drawable.platform1)
+        movingPlatformBitmap = BitmapFactory.decodeResource(resources, R.drawable.movingplatform1)
+        breakablePlatformBitmap = BitmapFactory.decodeResource(resources, R.drawable.breakableplatform1)
     }
+
 }

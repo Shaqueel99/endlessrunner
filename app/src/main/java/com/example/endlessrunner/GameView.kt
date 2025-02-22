@@ -46,12 +46,15 @@ class GameView @JvmOverloads constructor(
     private var backgroundBitmap1: Bitmap? = null
     private var backgroundBitmap2: Bitmap? = null
     private var backgroundBitmap3: Bitmap? = null
+    private var backgroundBitmap4: Bitmap? = null
+    private var backgroundBitmap5: Bitmap? = null
     private var currentBackground: Bitmap? = null
     private var platformBitmap: Bitmap? = null
     private var movingPlatformBitmap: Bitmap? = null
     private var breakablePlatformBitmap: Bitmap? = null
     private var backgroundOffset = 0f
     private var transitionBackgroundAdded = false
+    private var transitionBackgroundAddedLevel3 = false     // for level 3 (bg4 then bg5)
 
     // Level & Score
     private var currentLevel = 1
@@ -159,6 +162,8 @@ class GameView @JvmOverloads constructor(
         backgroundBitmap1 = BitmapFactory.decodeResource(resources, R.drawable.bg1)
         backgroundBitmap2 = BitmapFactory.decodeResource(resources, R.drawable.bg2)
         backgroundBitmap3 = BitmapFactory.decodeResource(resources, R.drawable.bg3)
+        backgroundBitmap4 = BitmapFactory.decodeResource(resources, R.drawable.bg4)
+        backgroundBitmap5 = BitmapFactory.decodeResource(resources, R.drawable.bg5)
         backgroundQueue.add(ScrollingBackground(backgroundBitmap1!!, 0f))
 
         currentBackground = backgroundBitmap1
@@ -172,30 +177,42 @@ class GameView @JvmOverloads constructor(
 
         val viewHeight = height.toFloat()
 
-        // Remove backgrounds that are completely off the bottom of the screen.
+        // Remove any backgrounds that are fully off the bottom of the screen.
         backgroundQueue.removeAll { bg ->
             // When drawn, the top edge is at: bg.startY + backgroundOffset.
             (bg.startY + backgroundOffset) > viewHeight
         }
 
-        // Ensure there are at least 2 backgrounds in the queue.
+        // Ensure there are at least 2 backgrounds.
         // Since we're scrolling downward, add a new background at the top.
         if (backgroundQueue.size < 2) {
             val firstBg = backgroundQueue.firstOrNull() ?: return
             // Position the new background exactly one background height above the first.
             val newStartY = firstBg.startY - firstBg.bitmap.height
 
-            // Choose the appropriate background:
-            // - Level 1: use bg1.
-            // - Level 2: if bg2 hasn't been added yet, use bg2; otherwise, use bg3.
+            // Choose the appropriate background based on current level:
+            // Level 1: always use bg1.
+            // Level 2: if bg2 hasn't been added yet, add it once; then use bg3.
+            // Level 3: if bg4 hasn't been added yet, add it once; then use bg5.
             val nextBitmap = when {
                 currentLevel == 1 -> backgroundBitmap1
-                currentLevel == 2 && !transitionBackgroundAdded -> {
-                    transitionBackgroundAdded = true
-                    backgroundBitmap2
+                currentLevel == 2 -> {
+                    if (!transitionBackgroundAdded) {
+                        transitionBackgroundAdded = true
+                        backgroundBitmap2
+                    } else {
+                        backgroundBitmap3
+                    }
                 }
-                currentLevel == 2 && transitionBackgroundAdded -> backgroundBitmap3
-                else -> backgroundBitmap3  // fallback if needed
+                currentLevel == 3 -> {
+                    if (!transitionBackgroundAddedLevel3) {
+                        transitionBackgroundAddedLevel3 = true
+                        backgroundBitmap4
+                    } else {
+                        backgroundBitmap5
+                    }
+                }
+                else -> backgroundBitmap5  // Fallback if needed.
             }
 
             nextBitmap?.let {
@@ -203,6 +220,7 @@ class GameView @JvmOverloads constructor(
             }
         }
     }
+
 
 
 
@@ -267,11 +285,16 @@ class GameView @JvmOverloads constructor(
     }
 
     private fun checkLevelTransition() {
-        if (score >= 5000 && currentLevel == 1) {
+        if (score >= 10000 && currentLevel == 1) {
             currentLevel = 2
-            transitionBackgroundAdded = false  // Ensure bg2 will be used next
+            transitionBackgroundAdded = false  // reset for level 2 transition (bg2 then bg3)
+        }
+        else if (score >= 40000 && currentLevel == 2) {
+            currentLevel = 3
+            transitionBackgroundAddedLevel3 = false  // reset for level 3 transition (bg4 then bg5)
         }
     }
+
 
 
     private fun checkScreenWrap() {

@@ -121,24 +121,32 @@ class StoreActivity : AppCompatActivity() {
             Toast.makeText(this, "Not enough coins", Toast.LENGTH_SHORT).show()
             return
         }
-        val userRef = firestore.collection("users").document(username)
-        firestore.runTransaction { transaction: Transaction ->
-            val snapshot = transaction.get(userRef)
-            val currentCoins = snapshot.getLong("coinsCollected")?.toInt() ?: 0
-            if (currentCoins < skin.price) {
-                throw Exception("Not enough coins")
-            }
-            transaction.update(userRef, "coinsCollected", currentCoins - skin.price)
-            transaction.update(userRef, "unlockedSkins", FieldValue.arrayUnion(skin.id))
-        }.addOnSuccessListener {
-            userCoins -= skin.price
-            unlockedSkins = unlockedSkins.toMutableList().apply { add(skin.id) }
-            updateUI()
-            storeAdapter.updateData(userCoins, unlockedSkins, equippedSkin)
-            Toast.makeText(this, "Purchased ${skin.name}!", Toast.LENGTH_SHORT).show()
-        }.addOnFailureListener { e ->
+
+        firestore.collection("users")
+            .whereEqualTo("username", username) // Find the correct document
+            .get()
+            .addOnSuccessListener { documents ->
+                for (document in documents) {
+                    val userRef = firestore.collection("users").document(document.id)
+                    firestore.runTransaction { transaction: Transaction ->
+                        val snapshot = transaction.get(userRef)
+                        val currentCoins = snapshot.getLong("coinsCollected")?.toInt() ?: 0
+                        if (currentCoins < skin.price) {
+                            throw Exception("Not enough coins")
+                        }
+                        transaction.update(userRef, "coinsCollected", currentCoins - skin.price)
+                        transaction.update(userRef, "unlockedSkins", FieldValue.arrayUnion(skin.id))
+                    }.addOnSuccessListener {
+                        userCoins -= skin.price
+                        unlockedSkins = unlockedSkins.toMutableList().apply { add(skin.id) }
+                        updateUI()
+                        storeAdapter.updateData(userCoins, unlockedSkins, equippedSkin)
+                        Toast.makeText(this, "Purchased ${skin.name}!", Toast.LENGTH_SHORT).show()
+                    }.addOnFailureListener { e ->
             Toast.makeText(this, "Purchase failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }
+                }
+            }
     }
 
     private fun equipSkin(username: String, skin: Skin) {

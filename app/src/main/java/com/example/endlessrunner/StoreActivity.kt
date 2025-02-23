@@ -61,10 +61,11 @@ class StoreActivity : AppCompatActivity() {
     }
 
     private fun loadUserData(username: String) {
-        firestore.collection("users").document(username)
+        firestore.collection("users").whereEqualTo("username", username)
             .get()
-            .addOnSuccessListener { document ->
-                if (document.exists()) {
+            .addOnSuccessListener {documents ->
+                val document = documents.firstOrNull()  // Get the first matching document
+                if (document != null)  {
                     userCoins = document.getLong("coinsCollected")?.toInt() ?: 0
                     val skins = document.get("unlockedSkins") as? List<String>
                     unlockedSkins = skins?.toMutableList() ?: mutableListOf("default")
@@ -114,7 +115,7 @@ class StoreActivity : AppCompatActivity() {
         )
         skinsRecyclerView.adapter = storeAdapter
     }
-
+    
     private fun purchaseSkin(username: String, skin: Skin) {
         if (userCoins < skin.price) {
             Toast.makeText(this, "Not enough coins", Toast.LENGTH_SHORT).show()
@@ -141,12 +142,19 @@ class StoreActivity : AppCompatActivity() {
     }
 
     private fun equipSkin(username: String, skin: Skin) {
-        firestore.collection("users").document(username)
-            .update("equippedSkin", skin.id)
-            .addOnSuccessListener {
-                equippedSkin = skin.id
-                storeAdapter.updateData(userCoins, unlockedSkins, equippedSkin)
-                Toast.makeText(this, "${skin.name} equipped!", Toast.LENGTH_SHORT).show()
+        firestore.collection("users")
+            .whereEqualTo("username", username) // Find the correct document
+            .get()
+            .addOnSuccessListener { documents ->
+                for (document in documents) {
+                    firestore.collection("users").document(document.id)
+                        .update("equippedSkin", skin.id)
+                        .addOnSuccessListener {
+                            equippedSkin = skin.id
+                            storeAdapter.updateData(userCoins, unlockedSkins, equippedSkin)
+                            Toast.makeText(this, "${skin.name} equipped!", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
             .addOnFailureListener { e ->
                 Toast.makeText(this, "Failed to equip skin: ${e.message}", Toast.LENGTH_SHORT).show()

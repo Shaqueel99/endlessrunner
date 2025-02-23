@@ -108,6 +108,21 @@
             }
         }
 
+        // ======================= NAME ==================================
+        private fun showImageSelectionDialog() {
+            val options = arrayOf("Take Photo", "Choose from Gallery", "Cancel")
+            AlertDialog.Builder(this)
+                .setTitle("Change Profile Picture")
+                .setItems(options) { dialog, which ->
+                    when (which) {
+                        0 -> openCamera()
+                        1 -> openGallery()
+                        2 -> dialog.dismiss()
+                    }
+                }
+                .show()
+        }
+
         private fun showChangeNameDialog() {
             // Create an AlertDialog for input
             val builder = AlertDialog.Builder(this)
@@ -263,6 +278,7 @@
             nameTextView.text = newName
         }
 
+        // ======================= PASSWORD =============================
         private fun showChangePasswordDialog() {
             // Create a LinearLayout to hold the EditText fields
             val layout = LinearLayout(this)
@@ -360,19 +376,6 @@
             dialog.show()
         }
 
-        private fun showImageSelectionDialog() {
-            val options = arrayOf("Take Photo", "Choose from Gallery", "Cancel")
-            AlertDialog.Builder(this)
-                .setTitle("Change Profile Picture")
-                .setItems(options) { dialog, which ->
-                    when (which) {
-                        0 -> openCamera()
-                        1 -> openGallery()
-                        2 -> dialog.dismiss()
-                    }
-                }
-                .show()
-        }
         // ======================= CAMERA ==================================
         private val REQUEST_IMAGE_CAPTURE = 1
         private val REQUEST_IMAGE_PICK = 2
@@ -414,14 +417,6 @@
                             uploadImageToFirebase(uri)
                         }
                     }
-                    REQUEST_IMAGE_PICK -> {
-                        data?.data?.let { uri ->
-                            Glide.with(this)
-                                .load(uri)
-                                .into(profileImageView)
-                            uploadImageToFirebase(uri)
-                        }
-                    }
                 }
             }
         }
@@ -446,17 +441,28 @@
         private fun saveImageUrlToFirestore(imageUrl: String) {
             val username =
                 getSharedPreferences("user_prefs", MODE_PRIVATE).getString("username", null)
-            if (username != null) {
-                firestore.collection("users").document(username)
-                    .update("profileImagePath", imageUrl)
-                    .addOnSuccessListener {
-                        Toast.makeText(this, "Profile image in user updated", Toast.LENGTH_SHORT)
-                            .show()
-                    }
+            if (username != null)
+            {
+                firestore.collection("users")
+                    .whereEqualTo("username", username) // Find the correct document
+                    .get()
+                    .addOnSuccessListener { documents ->
+                        for (document in documents) {
+                            firestore.collection("users").document(document.id)
+                                .update("profileImagePath", imageUrl)
+                                .addOnSuccessListener {
+                                    Toast.makeText(
+                                        this,
+                                        "Profile image in user updated",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }
                     .addOnFailureListener { exception ->
                         Toast.makeText(
                             this,
-                            "in user,Failed to update profile image: ${exception.message}",
+                            "in user, Failed to update profile image: ${exception.message}",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -504,22 +510,6 @@
             }
         }
 
-        // ======================= NAME ==================================
-        private fun updateUserName(newName: String) {
-            val username = getSharedPreferences("user_prefs", MODE_PRIVATE).getString("username", null)
-
-            if (username != null) {
-                val userDocRef = firestore.collection("users").document(username)
-
-                userDocRef.update("name", newName)
-                    .addOnSuccessListener {
-                        Toast.makeText(this, "Name updated successfully", Toast.LENGTH_SHORT).show()
-                    }
-                    .addOnFailureListener { exception ->
-                        Toast.makeText(this, "Failed to update name: ${exception.message}", Toast.LENGTH_SHORT).show()
-                    }
-            }
-        }
 
         // ========================= Validation =========================
         private fun isValidUsername(username: String): Boolean {

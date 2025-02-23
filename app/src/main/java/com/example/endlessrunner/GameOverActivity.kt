@@ -60,10 +60,12 @@ class GameOverActivity : AppCompatActivity() {
         }
 
         // First, fetch the user's profile image URL from the "users" collection.
-        firestore.collection("users").document(username)
+        //firestore.collection("users").document(username)
+        firestore.collection("users").whereEqualTo("username", username)
             .get()
-            .addOnSuccessListener { userDoc ->
-                if (userDoc.exists()) {
+            .addOnSuccessListener {documents ->
+                val userDoc = documents.firstOrNull()  // Get the first matching document
+                if (userDoc != null)  {
                     val profileImageUrl = userDoc.getString("profileImagePath")
                     // Now, check if a leaderboard entry exists for this user.
                     firestore.collection("leaderboard")

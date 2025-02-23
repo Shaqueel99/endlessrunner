@@ -129,10 +129,12 @@ class GameView @JvmOverloads constructor(
         val sharedPrefs = context.getSharedPreferences("user_prefs", MODE_PRIVATE)
         val username = sharedPrefs.getString("username", null)
         if (username != null) {
-            FirebaseFirestore.getInstance().collection("users").document(username)
+            val firestore = FirebaseFirestore.getInstance()
+            firestore.collection("users").whereEqualTo("username", username)
                 .get()
-                .addOnSuccessListener { document ->
-                    if (document.exists()) {
+                .addOnSuccessListener { documents ->
+                    val document = documents.firstOrNull()  // Get the first matching document
+                    if (document != null) {
                         equippedSkinFromFirebase = document.getString("equippedSkin") ?: "default"
                         if (equippedSkinFromFirebase == "profile") {
                             val profileImageUrl = document.getString("profileImagePath") ?: ""
@@ -399,15 +401,38 @@ class GameView @JvmOverloads constructor(
         if (squareBody.y > height) {
             val sharedPrefs = context.getSharedPreferences("user_prefs", MODE_PRIVATE)
             val username = sharedPrefs.getString("username", null)
-            username?.let {
-                FirebaseFirestore.getInstance().collection("users").document(it)
+
+            if (username != null) {
+                val firestore = FirebaseFirestore.getInstance()
+                firestore.collection("users").whereEqualTo("username", username)
                     .get()
-                    .addOnSuccessListener { document ->
+                    .addOnSuccessListener { documents ->
+                        val document = documents.firstOrNull()  // Get the first matching document
+                        if (document != null) {
                         val previousCoins = document.getLong("coinsCollected") ?: 0L
                         val newTotal = previousCoins + coinscollected
-                        FirebaseFirestore.getInstance().collection("users").document(it)
-                            .update("coinsCollected", newTotal)
-                    }
+                            // update coins
+                            firestore.collection("users")
+                                .whereEqualTo("username", username) // Find the correct document
+                                .get()
+                                .addOnSuccessListener { documents ->
+                                    for (document in documents) {
+                                        firestore.collection("users").document(document.id)
+                                            .update("coinsCollected", newTotal)
+                                            .addOnSuccessListener {
+                                                Log.d(
+                                                    "Firestore",
+                                                    "Coins updated successfully: $newTotal"
+                                                )
+                                            }
+                                    }
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e("Firestore", "Failed to update coins: ${e.message}")
+                                    Toast.makeText(context, "Failed to update coins.", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                 }
                     .addOnFailureListener { e ->
                         Log.e("Firestore", "Failed to update coins: ${e.message}")
                         Toast.makeText(context, "Failed to update coins.", Toast.LENGTH_SHORT).show()

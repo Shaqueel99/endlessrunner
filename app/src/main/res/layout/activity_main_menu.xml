@@ -50,7 +50,7 @@
                     android:id="@+id/welcomeTextView"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/silkscreen"
+                    android:fontFamily="@font/vt323"
                     android:textColor="@android:color/white"
                     android:textSize="18sp" />
 

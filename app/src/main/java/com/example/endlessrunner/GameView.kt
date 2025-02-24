@@ -411,7 +411,6 @@ class GameView @JvmOverloads constructor(
                         if (document != null) {
                         val previousCoins = document.getLong("coinsCollected") ?: 0L
                         val newTotal = previousCoins + coinscollected
-                            // update coins
                             firestore.collection("users")
                                 .whereEqualTo("username", username) // Find the correct document
                                 .get()

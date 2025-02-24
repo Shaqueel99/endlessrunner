@@ -15,6 +15,7 @@
         android:id="@+id/coinTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:fontFamily="@font/silkscreen"
         android:text="Coins: 0"
         android:textColor="@color/white"
         android:textSize="20sp"
@@ -27,6 +28,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
+        android:fontFamily="@font/silkscreen"
         android:text="Store"
         android:textColor="@color/white"
         android:textSize="32sp"
@@ -50,6 +52,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
+        android:fontFamily="@font/silkscreen"
         android:text="Back"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />

@@ -3,6 +3,7 @@
     import android.content.Intent
     import android.content.pm.PackageManager
     import android.net.Uri
+    import android.os.Build
     import android.os.Bundle
     import android.os.Environment
     import android.provider.MediaStore
@@ -17,6 +18,8 @@
     import androidx.activity.result.contract.ActivityResultContracts
     import androidx.appcompat.app.AlertDialog
     import androidx.appcompat.app.AppCompatActivity
+    import androidx.core.app.ActivityCompat
+    import androidx.core.content.ContextCompat
     import androidx.core.content.FileProvider
     import com.bumptech.glide.Glide
     import com.google.firebase.firestore.FirebaseFirestore
@@ -109,20 +112,6 @@
         }
 
         // ======================= NAME ==================================
-        private fun showImageSelectionDialog() {
-            val options = arrayOf("Take Photo", "Choose from Gallery", "Cancel")
-            AlertDialog.Builder(this)
-                .setTitle("Change Profile Picture")
-                .setItems(options) { dialog, which ->
-                    when (which) {
-                        0 -> openCamera()
-                        1 -> openGallery()
-                        2 -> dialog.dismiss()
-                    }
-                }
-                .show()
-        }
-
         private fun showChangeNameDialog() {
             // Create an AlertDialog for input
             val builder = AlertDialog.Builder(this)
@@ -377,9 +366,57 @@
         }
 
         // ======================= CAMERA ==================================
+        private fun showImageSelectionDialog() {
+            val options = arrayOf("Take Photo", "Choose from Gallery", "Cancel")
+            AlertDialog.Builder(this)
+                .setTitle("Change Profile Picture")
+                .setItems(options) { dialog, which ->
+                    when (which) {
+                        0 -> checkCameraPermission()
+                        1 -> checkStoragePermission()
+                        2 -> dialog.dismiss()
+                    }
+                }
+                .show()
+        }
+        private val CAMERA_PERMISSION_CODE = 101
+        private val STORAGE_PERMISSION_CODE = 102
         private val REQUEST_IMAGE_CAPTURE = 1
         private val REQUEST_IMAGE_PICK = 2
         private var imageUri: Uri? = null
+
+        private fun checkCameraPermission() {
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(android.Manifest.permission.CAMERA),
+                    CAMERA_PERMISSION_CODE
+                )
+            } else {
+                openCamera()
+            }
+        }
+
+        private fun checkStoragePermission() {
+            val storagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                android.Manifest.permission.READ_MEDIA_IMAGES
+            } else {
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+
+            if (ContextCompat.checkSelfPermission(this, storagePermission)
+                != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(storagePermission),
+                    STORAGE_PERMISSION_CODE
+                )
+            } else {
+                openGallery()
+            }
+        }
+
 
         private fun openCamera() {
             val photoFile: File? = createImageFile()
@@ -402,8 +439,10 @@
         // ======================= GALLERY ==================================
         private fun openGallery() {
             val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            intent.type = "image/*"
             startActivityForResult(intent, REQUEST_IMAGE_PICK)
         }
+
 
         override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
             super.onActivityResult(requestCode, resultCode, data)
@@ -420,6 +459,31 @@
                 }
             }
         }
+
+        override fun onRequestPermissionsResult(
+            requestCode: Int,
+            permissions: Array<out String>,
+            grantResults: IntArray
+        ) {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+            when (requestCode) {
+                CAMERA_PERMISSION_CODE -> {
+                    if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                        openCamera()
+                    } else {
+                        Toast.makeText(this, "Camera permission is required to take photos", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                STORAGE_PERMISSION_CODE -> {
+                    if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                        openGallery()
+                    } else {
+                        Toast.makeText(this, "Storage permission is required to pick an image", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+
 
         private fun uploadImageToFirebase(imageUri: Uri) {
             val storageRef = storage.reference

@@ -208,7 +208,7 @@ class GameView @JvmOverloads constructor(
                                             .get()
                                         profileSkinBitmap = Bitmap.createScaledBitmap(
                                             bitmap!!,
-                                            160,
+                                            100,
                                             100,
                                             false
                                         )
@@ -230,7 +230,7 @@ class GameView @JvmOverloads constructor(
     }
 
     private fun loadImages(w: Int, h: Int) {
-        squareBody = PhysicsBody((w - 80f) / 2f, h - 180f, 80f, 80f, 0f, jumpVelocity)
+        squareBody = PhysicsBody((w - 160f) / 2f, h - 180f, 160f, 160f, 0f, jumpVelocity)
         scrollThreshold = h / 3f
         platformManager = PlatformManager(w, h)
 
@@ -554,7 +554,7 @@ class GameView @JvmOverloads constructor(
 
         // If the equipped skin is "profile", overlay the profile skin.
         if (equippedSkinFromFirebase == "profile" && profileSkinBitmap != null) {
-            canvas.drawBitmap(profileSkinBitmap!!, squareBody.x, squareBody.y, paint)
+            canvas.drawBitmap(profileSkinBitmap!!, squareBody.x + 30, squareBody.y, paint)
         }
     }
 

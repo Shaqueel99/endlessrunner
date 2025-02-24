@@ -11,6 +11,7 @@
         android:layout_width="87dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
+        android:fontFamily="@font/silkscreen"
         android:text="1."
         android:textColor="#FFFFFF"
         android:textSize="34sp"
@@ -33,6 +34,7 @@
             android:id="@+id/nameText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/silkscreen"
             android:text="Username"
             android:textColor="#FFFFFF"
             android:textSize="18sp"
@@ -42,6 +44,7 @@
             android:id="@+id/scoreText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/silkscreen"
             android:text="Score: 0"
             android:textColor="#FFFFFF"
             android:textSize="16sp" />

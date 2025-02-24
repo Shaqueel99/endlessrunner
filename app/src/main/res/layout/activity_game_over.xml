@@ -11,31 +11,37 @@
         android:id="@+id/gameOverTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:fontFamily="@font/silkscreen"
         android:text="Game Over"
-        android:textSize="36sp"
         android:textColor="#FFFFFF"
-        android:layout_marginBottom="24dp" />
+        android:textSize="36sp" />
 
     <TextView
         android:id="@+id/scoreTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:fontFamily="@font/silkscreen"
         android:text="Your Score: 0"
-        android:textSize="24sp"
         android:textColor="#FFFFFF"
-        android:layout_marginBottom="24dp" />
+        android:textSize="24sp" />
 
     <Button
         android:id="@+id/restartGame"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
-        android:text="Restart" />
+        android:fontFamily="@font/silkscreen"
+        android:text="Restart"
+        android:translationY="150dp" />
 
     <Button
         android:id="@+id/mainMenuButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Main Menu" />
+        android:fontFamily="@font/silkscreen"
+        android:text="Main Menu"
+        android:translationY="160dp" />
 
 </LinearLayout>

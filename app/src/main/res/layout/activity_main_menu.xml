@@ -1,10 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/frameContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
-    android:backgroundTint="#000000">
+    android:background="@android:color/transparent">
 
     <!-- Scrolling background view (it handles drawing bg1 infinitely) -->
     <com.example.endlessrunner.ScrollingBackgroundView
@@ -17,10 +16,7 @@
         android:id="@+id/mainMenuContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:backgroundTint="#C93A3939"
-        android:backgroundTintMode="src_over"
-        android:foreground="@color/black"
-        android:foregroundTint="#00000000"
+        android:backgroundTint="@android:color/transparent"
         android:orientation="vertical"
         android:padding="24dp">
 
@@ -61,6 +57,7 @@
                     android:id="@+id/coinsTextView"
                     android:layout_width="364dp"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/silkscreen"
                     android:lineSpacingExtra="8sp"
                     android:text="Coins: 0"
                     android:textAlignment="center"
@@ -77,50 +74,82 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="48dp"
+            android:fontFamily="@font/silkscreen"
+            android:gravity="center"
             android:lineSpacingExtra="8sp"
-            android:text="Square - Scramble"
-            android:textAlignment="center"
+            android:text="Going Home"
             android:textAllCaps="true"
             android:textColor="@android:color/white"
-            android:textColorHighlight="#000000"
             android:textDirection="firstStrongRtl"
-            android:textSize="36sp"
+            android:textSize="48sp"
             android:textStyle="bold" />
 
-        <!-- Menu Buttons -->
-        <Button
-            android:id="@+id/playButton"
+        <!-- Transparent ConstraintLayout -->
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Play" />
+            android:layout_height="match_parent"
+            android:background="@android:color/transparent">
 
-        <Button
-            android:id="@+id/leaderboardButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Leaderboard" />
+            <!-- Centered Play Button -->
 
-        <Button
-            android:id="@+id/store"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="STORE" />
+            <!-- Bottom Row Buttons, Always at Bottom -->
+            <Button
+                android:id="@+id/playButton"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:background="@drawable/playr"
+                android:textColor="#FFFFFF"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.498"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="0.304" />
 
-        <Button
-            android:id="@+id/signOutButton"
-            android:layout_width="match_parent"
+        <LinearLayout
+            android:id="@+id/bottomButtonContainer"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Sign Out" />
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:padding="10dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
-        <Button
-            android:id="@+id/quitButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Quit" />
+            <Button
+                android:id="@+id/leaderboardButton"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_margin="16dp"
+                android:background="@drawable/leaderboardr" />
+
+            <Button
+                android:id="@+id/storeButton"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_margin="16dp"
+                android:background="@drawable/shopr" />
+
+            <Button
+                android:id="@+id/signOutButton"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_margin="16dp"
+                android:background="@drawable/signoutr" />
+
+            <Button
+                android:id="@+id/quitButton"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_margin="16dp"
+                android:background="@drawable/quitr" />
+    </LinearLayout>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
 
     </LinearLayout>
 

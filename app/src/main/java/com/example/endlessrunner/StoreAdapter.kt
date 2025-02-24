@@ -71,7 +71,7 @@ class StoreAdapter(
             // If the skin has no imageUrl, create a colored square.
             if (skin.imageUrl.isEmpty()) {
                 val color = when (skin.id) {
-                    "default" -> Color.BLUE
+                    "default" -> Color.BLACK
                     "red" -> Color.RED
                     "green" -> Color.GREEN
                     "profile" -> Color.MAGENTA

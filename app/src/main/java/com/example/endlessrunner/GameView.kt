@@ -28,7 +28,11 @@ class GameView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyle: Int = 0
 ) : View(context, attrs, defStyle), SensorEventListener {
 
-
+    // In your GameView (or an appropriate initialization method)
+    private lateinit var playerFrames: Array<Bitmap>
+    private var currentFrameIndex = 0
+    private val frameDuration = 100L // duration per frame in milliseconds
+    private var lastFrameChangeTime = 0L
     // Paints
     private val paint = Paint()
     private val textPaint = Paint().apply {
@@ -42,6 +46,7 @@ class GameView @JvmOverloads constructor(
     val tintedPaint = Paint().apply {
         colorFilter = PorterDuffColorFilter(Color.argb(100, 0, 0, 0), PorterDuff.Mode.DARKEN)
     }
+
 
     // Bitmaps & Backgrounds
     private var backgroundBitmap1: Bitmap? = null
@@ -90,7 +95,7 @@ class GameView @JvmOverloads constructor(
     private var tiltSensitivity = 4.0f
 
     // Skins & Profile
-    private var equippedSkinFromFirebase: String = "default"
+    var equippedSkinFromFirebase: String = "default"
     private var profileSkinBitmap: Bitmap? = null
 
     // Sensors
@@ -107,15 +112,70 @@ class GameView @JvmOverloads constructor(
         val bitmap: Bitmap,
         var startY: Float
     )
+    private fun loadPlayerAnimationFrames(string: String) {
+        // Define the desired player size.
+        val playerSize = 160
+        playerFrames = when (string) {
+            "red" -> arrayOf(
+                BitmapFactory.decodeResource(resources, R.drawable.idlered),
+                BitmapFactory.decodeResource(resources, R.drawable.fallred1),
+                BitmapFactory.decodeResource(resources, R.drawable.fallred2),
+                BitmapFactory.decodeResource(resources, R.drawable.fallred3)
+            )
+            "green" -> arrayOf(
+                BitmapFactory.decodeResource(resources, R.drawable.idlegreen),
+                BitmapFactory.decodeResource(resources, R.drawable.fallgreen1),
+                BitmapFactory.decodeResource(resources, R.drawable.fallgreen2),
+                BitmapFactory.decodeResource(resources, R.drawable.fallgreen3)
+            )
+            "profile" -> arrayOf(
+                BitmapFactory.decodeResource(resources, R.drawable.idle),
+                BitmapFactory.decodeResource(resources, R.drawable.fall1),
+                BitmapFactory.decodeResource(resources, R.drawable.fall2),
+                BitmapFactory.decodeResource(resources, R.drawable.fall3)
+            )
+            else -> arrayOf(
+                BitmapFactory.decodeResource(resources, R.drawable.idle),
+                BitmapFactory.decodeResource(resources, R.drawable.fall1),
+                BitmapFactory.decodeResource(resources, R.drawable.fall2),
+                BitmapFactory.decodeResource(resources, R.drawable.fall3)
+            )
+        }.map { original ->
+            // Scale each frame to match the player's size.
+            Bitmap.createScaledBitmap(original, playerSize, playerSize, true)
+        }.toTypedArray()
+    }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        loadPlayerAnimationFrames("default")
         loadEquippedSkinFromFirebase()
         startGameLoop()
         accelerometer?.let {
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
         }
     }
+    private fun updatePlayerAnimation() {
+        if (squareBody.vy > 0) { // Player is falling
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastFrameChangeTime >= frameDuration) {
+                // If we're not already in the falling animation, start at fall1 (index 1)
+                if (currentFrameIndex < 1 || currentFrameIndex > 3) {
+                    currentFrameIndex = 1
+                } else {
+                    currentFrameIndex++
+                    if (currentFrameIndex > 3) {
+                        currentFrameIndex = 1
+                    }
+                }
+                lastFrameChangeTime = currentTime
+            }
+        } else {
+            // Not falling; always show idle frame (index 0)
+            currentFrameIndex = 0
+        }
+    }
+
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
@@ -148,8 +208,8 @@ class GameView @JvmOverloads constructor(
                                             .get()
                                         profileSkinBitmap = Bitmap.createScaledBitmap(
                                             bitmap!!,
-                                            squareBody.width.toInt(),
-                                            squareBody.width.toInt(),
+                                            160,
+                                            100,
                                             false
                                         )
                                         withContext(Dispatchers.Main) { invalidate() }
@@ -159,6 +219,7 @@ class GameView @JvmOverloads constructor(
                                 }
                             }
                         }
+                        loadPlayerAnimationFrames(equippedSkinFromFirebase)
                     }
                 }
                 .addOnFailureListener { e ->
@@ -409,10 +470,9 @@ class GameView @JvmOverloads constructor(
                     .addOnSuccessListener { documents ->
                         val document = documents.firstOrNull()  // Get the first matching document
                         if (document != null) {
-                        val previousCoins = document.getLong("coinsCollected") ?: 0L
-                        val newTotal = previousCoins + coinscollected
-                            firestore.collection("users")
-                                .whereEqualTo("username", username) // Find the correct document
+                            val previousCoins = document.getLong("coinsCollected") ?: 0L
+                            val newTotal = previousCoins + coinscollected
+                            firestore.collection("users").whereEqualTo("username", username) // Find the correct document
                                 .get()
                                 .addOnSuccessListener { documents ->
                                     for (document in documents) {
@@ -453,6 +513,7 @@ class GameView @JvmOverloads constructor(
         drawPlatforms(canvas)
         drawCoins(canvas)
         drawBoosts(canvas)
+        updatePlayerAnimation()
         drawPlayer(canvas)
         drawUI(canvas)
     }
@@ -487,14 +548,17 @@ class GameView @JvmOverloads constructor(
     }
 
     private fun drawPlayer(canvas: Canvas) {
-        val playerBitmap = when (equippedSkinFromFirebase) {
-            "red" -> createColorSquare(Color.RED, squareBody.width.toInt())
-            "green" -> createColorSquare(Color.GREEN, squareBody.width.toInt())
-            "profile" -> profileSkinBitmap ?: createColorSquare(Color.MAGENTA, squareBody.width.toInt())
-            else -> createColorSquare(Color.BLUE, squareBody.width.toInt())
+        // Draw the base frame from the playerFrames array.
+        val baseFrame = playerFrames[currentFrameIndex]
+        canvas.drawBitmap(baseFrame, squareBody.x, squareBody.y, paint)
+
+        // If the equipped skin is "profile", overlay the profile skin.
+        if (equippedSkinFromFirebase == "profile" && profileSkinBitmap != null) {
+            canvas.drawBitmap(profileSkinBitmap!!, squareBody.x, squareBody.y, paint)
         }
-        canvas.drawBitmap(playerBitmap, squareBody.x, squareBody.y, paint)
     }
+
+
 
     private fun createColorSquare(color: Int, size: Int): Bitmap {
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)

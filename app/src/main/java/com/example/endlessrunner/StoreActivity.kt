@@ -32,7 +32,7 @@ class StoreActivity : AppCompatActivity() {
 
     // Example set of skins:
     private val availableSkins = listOf(
-        Skin("default", "Default (Blue)", 0, ""),
+        Skin("default", "Default (Black)", 0, ""),
         Skin("red", "Red Skin", 10, ""),
         Skin("green", "Green Skin", 10, ""),
         Skin("profile", "Profile Skin", 50, "") // will fill in with user's profile image if available

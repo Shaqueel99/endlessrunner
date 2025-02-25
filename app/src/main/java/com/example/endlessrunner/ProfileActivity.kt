@@ -389,95 +389,83 @@
             dialog.show()
         }
 
-        // ======================= CAMERA ==================================
-        /**
-         * Displays a dialog to allow the user to select a new profile image.
-         */
-        private fun showImageSelectionDialog() {
-            val options = arrayOf("Take Photo", "Choose from Gallery", "Cancel")
-            AlertDialog.Builder(this)
-                .setTitle("Change Profile Picture")
-                .setItems(options) { dialog, which ->
-                    when (which) {
-                        0 -> checkCameraPermission()
-                        1 -> checkStoragePermission()
-                        2 -> dialog.dismiss()
+                // ======================= CAMERA ==================================
+                private fun showImageSelectionDialog() {
+                    val options = arrayOf("Take Photo", "Choose from Gallery", "Cancel")
+                    AlertDialog.Builder(this)
+                        .setTitle("Change Profile Picture")
+                        .setItems(options) { dialog, which ->
+                            when (which) {
+                                0 -> checkCameraPermission()
+                                1 -> checkStoragePermission()
+                                2 -> dialog.dismiss()
+                            }
+                        }
+                        .show()
+                }
+                private val CAMERA_PERMISSION_CODE = 101
+                private val STORAGE_PERMISSION_CODE = 102
+                private val REQUEST_IMAGE_CAPTURE = 1
+                private val REQUEST_IMAGE_PICK = 2
+                private var imageUri: Uri? = null
+
+                private fun checkCameraPermission() {
+                    if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA)
+                        != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(
+                            this,
+                            arrayOf(android.Manifest.permission.CAMERA),
+                            CAMERA_PERMISSION_CODE
+                        )
+                    } else {
+                        openCamera()
                     }
                 }
-                .show()
-        }
-        private val CAMERA_PERMISSION_CODE = 101
-        private val STORAGE_PERMISSION_CODE = 102
-        private val REQUEST_IMAGE_CAPTURE = 1
-        private val REQUEST_IMAGE_PICK = 2
-        private var imageUri: Uri? = null
-        /**
-         * Checks for camera permission and opens the camera if granted.
-         */
-        private fun checkCameraPermission() {
-            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA)
-                != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(android.Manifest.permission.CAMERA),
-                    CAMERA_PERMISSION_CODE
-                )
-            } else {
-                openCamera()
-            }
-        }
-        /**
-         * Checks for storage permission and opens the gallery if granted.
-         */
-        private fun checkStoragePermission() {
-            val storagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                android.Manifest.permission.READ_MEDIA_IMAGES
-            } else {
-                android.Manifest.permission.READ_EXTERNAL_STORAGE
-            }
 
-            if (ContextCompat.checkSelfPermission(this, storagePermission)
-                != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(storagePermission),
-                    STORAGE_PERMISSION_CODE
-                )
-            } else {
-                openGallery()
-            }
-        }
+                private fun checkStoragePermission() {
+                    val storagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        android.Manifest.permission.READ_MEDIA_IMAGES
+                    } else {
+                        android.Manifest.permission.READ_EXTERNAL_STORAGE
+                    }
 
-        /**
-         * Opens the camera to capture a new profile image.
-         */
-        private fun openCamera() {
-            val photoFile: File? = createImageFile()
-            if (photoFile != null) {
-                imageUri = FileProvider.getUriForFile(
-                    this,
-                    "${applicationContext.packageName}.provider",
-                    photoFile
-                )
-
-                val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
-                    putExtra(MediaStore.EXTRA_OUTPUT, imageUri)
+                    if (ContextCompat.checkSelfPermission(this, storagePermission)
+                        != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(
+                            this,
+                            arrayOf(storagePermission),
+                            STORAGE_PERMISSION_CODE
+                        )
+                    } else {
+                        openGallery()
+                    }
                 }
-                startActivityForResult(intent, REQUEST_IMAGE_CAPTURE)
-            } else {
-                Toast.makeText(this, "Unable to create image file", Toast.LENGTH_SHORT).show()
-            }
-        }
 
-        // ======================= GALLERY ==================================
-        /**
-         * Opens the gallery to allow the user to pick an image.
-         */
-        private fun openGallery() {
-            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            intent.type = "image/*"
-            startActivityForResult(intent, REQUEST_IMAGE_PICK)
-        }
+
+                private fun openCamera() {
+                    val photoFile: File? = createImageFile()
+                    if (photoFile != null) {
+                        imageUri = FileProvider.getUriForFile(
+                            this,
+                            "${applicationContext.packageName}.provider",
+                            photoFile
+                        )
+
+                        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                            putExtra(MediaStore.EXTRA_OUTPUT, imageUri)
+                        }
+                        startActivityForResult(intent, REQUEST_IMAGE_CAPTURE)
+                    } else {
+                        Toast.makeText(this, "Unable to create image file", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                // ======================= GALLERY ==================================
+                private fun openGallery() {
+                    val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                    intent.type = "image/*"
+                    startActivityForResult(intent, REQUEST_IMAGE_PICK)
+                }
 
         /**
          * Handles the result from image capture or gallery pick.
@@ -488,6 +476,14 @@
                 when (requestCode) {
                     REQUEST_IMAGE_CAPTURE -> {
                         imageUri?.let { uri ->
+                            Glide.with(this)
+                                .load(uri)
+                                .into(profileImageView)
+                            uploadImageToFirebase(uri)
+                        }
+                    }
+                    REQUEST_IMAGE_PICK -> {
+                        data?.data?.let { uri ->
                             Glide.with(this)
                                 .load(uri)
                                 .into(profileImageView)

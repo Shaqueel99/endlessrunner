@@ -112,6 +112,9 @@ class GameView @JvmOverloads constructor(
         val bitmap: Bitmap,
         var startY: Float
     )
+    // **Loads and scales the player's animation frames based on the selected skin.**
+    // This function retrieves different sets of animation frames depending on the player's skin type.
+    // The frames are then resized to a standard player size.
     private fun loadPlayerAnimationFrames(string: String) {
         // Define the desired player size.
         val playerSize = 160
@@ -145,7 +148,11 @@ class GameView @JvmOverloads constructor(
             Bitmap.createScaledBitmap(original, playerSize, playerSize, true)
         }.toTypedArray()
     }
-
+    /**
+     * Called when the view is attached to a window.
+     * Initializes the player's animation, loads the equipped skin from Firebase,
+     * starts the game loop, and registers the accelerometer listener.
+     */
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         loadPlayerAnimationFrames("default")
@@ -155,6 +162,10 @@ class GameView @JvmOverloads constructor(
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
         }
     }
+    /**
+     * Updates the player's animation based on the vertical velocity.
+     * Switches frames during a fall and resets to the idle frame when not falling.
+     */
     private fun updatePlayerAnimation() {
         if (squareBody.vy > 0) { // Player is falling
             val currentTime = System.currentTimeMillis()
@@ -176,7 +187,10 @@ class GameView @JvmOverloads constructor(
         }
     }
 
-
+    /**
+     * Called when the view is detached from a window.
+     * Cancels the game loop coroutine and unregisters the sensor listener.
+     */
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         gameJob?.cancel()
@@ -185,6 +199,12 @@ class GameView @JvmOverloads constructor(
 
     // ----------------- Initialization Helpers -----------------
 
+
+    // **Retrieves the currently equipped player skin from Firebase Firestore.**
+    // This function fetches the user's selected skin from Firestore and applies it.
+    // If the user has a profile image as their skin, it loads the image asynchronously.
+
+    // Access shared preferences to retrieve the stored username.
     private fun loadEquippedSkinFromFirebase() {
         val sharedPrefs = context.getSharedPreferences("user_prefs", MODE_PRIVATE)
         val username = sharedPrefs.getString("username", null)
@@ -230,6 +250,9 @@ class GameView @JvmOverloads constructor(
     }
 
     private fun loadImages(w: Int, h: Int) {
+        // **Initializes physics body, platform manager, and loads necessary images.**
+        // Set up the player's physics body with a fixed size and initial position.
+        // The player's width and height are set to 160x160 pixels.
         squareBody = PhysicsBody((w - 160f) / 2f, h - 180f, 160f, 160f, 0f, jumpVelocity)
         scrollThreshold = h / 3f
         platformManager = PlatformManager(w, h)
@@ -257,6 +280,8 @@ class GameView @JvmOverloads constructor(
         breakablePlatformBitmap3 = BitmapFactory.decodeResource(resources, R.drawable.breakableplatform3)
     }
     private fun manageBackgroundQueue() {
+        // **Manages background scrolling by ensuring continuous background rendering.**
+        // If there are no backgrounds in the queue, exit the function.
         if (backgroundQueue.isEmpty()) return
 
         val viewHeight = height.toFloat()
@@ -309,7 +334,10 @@ class GameView @JvmOverloads constructor(
 
 
     // ----------------- Game Loop -----------------
-
+    /**
+     * Starts the game loop using a coroutine.
+     * Continuously updates the game state and triggers view invalidation at roughly 60 FPS.
+     */
     private fun startGameLoop() {
         gameJob = CoroutineScope(Dispatchers.Main).launch {
             while (isActive) {
@@ -319,7 +347,10 @@ class GameView @JvmOverloads constructor(
             }
         }
     }
-
+    /**
+     * Updates the overall game state.
+     * This includes updating player position, background scrolling, level transitions, collisions, and score.
+     */
     private fun updateGame() {
         if (width == 0 || height == 0) return
 
@@ -338,7 +369,10 @@ class GameView @JvmOverloads constructor(
     // ----------------- Update Helpers -----------------
 
     private var currentOffset = 0f
-
+    /**
+     * Updates the player's position based on the current control inputs and gravity.
+     * Also adjusts the vertical offset and increments the score when the player reaches the scroll threshold.
+     */
     private fun updatePlayerPosition() {
         squareBody.vx = tiltControl * tiltSensitivity + touchControl
         squareBody.x += squareBody.vx
@@ -354,12 +388,18 @@ class GameView @JvmOverloads constructor(
             score += currentOffset
         }
     }
-
+    /**
+     * Updates the background offset to achieve a parallax scrolling effect.
+     */
     private fun updateBackgroundOffset()
     {
         backgroundOffset += currentOffset * 0.5f
     }
-
+    /**
+     * Draws all the scrolling backgrounds on the canvas.
+     *
+     * @param canvas The canvas on which the backgrounds are drawn.
+     */
     private fun drawBackgrounds(canvas: Canvas) {
         // Draw all backgrounds in the queue from earliest to latest
         for (bg in backgroundQueue) {
@@ -367,7 +407,10 @@ class GameView @JvmOverloads constructor(
             canvas.drawBitmap(bg.bitmap, 0f, drawY, tintedPaint)
         }
     }
-
+    /**
+     * Checks for level transitions based on the current score.
+     * Upgrades the game level and resets transition flags when thresholds are reached.
+     */
     private fun checkLevelTransition() {
         if (score >= 10000 && currentLevel == 1) {
             currentLevel = 2
@@ -378,7 +421,11 @@ class GameView @JvmOverloads constructor(
             transitionBackgroundAddedLevel3 = false  // reset for level 3 transition (bg4 then bg5)
         }
     }
-
+    /**
+     * Draws all the game platforms on the canvas.
+     *
+     * @param canvas The canvas used for drawing platforms.
+     */
     private fun drawPlatforms(canvas: Canvas) {
         platformManager?.platforms?.forEach { platform ->
             val bmp: Bitmap? = when (platform.spawnLevel) {
@@ -411,7 +458,9 @@ class GameView @JvmOverloads constructor(
         }
     }
 
-
+    /**
+     * Wraps the player's horizontal position around the screen if they exit one side.
+     */
     private fun checkScreenWrap() {
         if (squareBody.x > width) {
             squareBody.x = 0f
@@ -419,7 +468,10 @@ class GameView @JvmOverloads constructor(
             squareBody.x = width - squareBody.width
         }
     }
-
+    /**
+     * Checks for collisions between the player and platforms.
+     * If a collision occurs while the player is falling, applies a jump response and removes breakable platforms.
+     */
     private fun checkPlatformCollisions() {
         if (squareBody.vy > 0) {
             val prevBottom = squareBody.y + squareBody.height - squareBody.vy
@@ -435,7 +487,10 @@ class GameView @JvmOverloads constructor(
             }
         }
     }
-
+    /**
+     * Checks for collisions between the player and coins.
+     * Increments the coin count and removes the coin from the game if collected.
+     */
     private fun checkCoinCollisions() {
         platformManager?.coins?.removeIf { coin ->
             if (CollisionUtils.isCollidingWithCoin(squareBody, coin)) {
@@ -446,7 +501,10 @@ class GameView @JvmOverloads constructor(
             }
         }
     }
-
+    /**
+     * Checks for collisions between the player and boost items.
+     * Applies a boost jump effect and removes the boost item upon collision.
+     */
     private fun checkBoostCollisions() {
         platformManager?.boosts?.removeIf { boost ->
             if (CollisionUtils.isCollidingWithBoost(squareBody, boost)) {
@@ -457,7 +515,10 @@ class GameView @JvmOverloads constructor(
             }
         }
     }
-
+    /**
+     * Checks whether the game-over condition has been met (i.e., player falls off the screen).
+     * Updates the user's coin count in Firestore and navigates to the Game Over screen.
+     */
     private fun checkGameOver() {
         if (squareBody.y > height) {
             val sharedPrefs = context.getSharedPreferences("user_prefs", MODE_PRIVATE)
@@ -506,7 +567,11 @@ class GameView @JvmOverloads constructor(
     }
 
     // ----------------- Drawing Helpers -----------------
-
+    /**
+     * Draws the entire game scene including the background, platforms, coins, boosts, player, and UI.
+     *
+     * @param canvas The canvas on which the game elements are drawn.
+     */
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         drawBackgrounds(canvas) // draws the entire queue in back
@@ -521,7 +586,11 @@ class GameView @JvmOverloads constructor(
 
 
 
-
+    /**
+     * Draws all the coins on the canvas.
+     *
+     * @param canvas The canvas used for drawing coins.
+     */
     private fun drawCoins(canvas: Canvas) {
         paint.color = Color.YELLOW
         platformManager?.coins?.forEach { coin ->
@@ -533,7 +602,11 @@ class GameView @JvmOverloads constructor(
             )
         }
     }
-
+    /**
+     * Draws all the boost items on the canvas.
+     *
+     * @param canvas The canvas used for drawing boost items.
+     */
     private fun drawBoosts(canvas: Canvas) {
         paint.color = Color.CYAN
         platformManager?.boosts?.forEach { boost ->
@@ -546,7 +619,12 @@ class GameView @JvmOverloads constructor(
             )
         }
     }
-
+    /**
+     * Draws the player character using the current animation frame.
+     * Overlays the profile skin if the equipped skin is "profile".
+     *
+     * @param canvas The canvas on which the player is drawn.
+     */
     private fun drawPlayer(canvas: Canvas) {
         // Draw the base frame from the playerFrames array.
         val baseFrame = playerFrames[currentFrameIndex]
@@ -559,7 +637,14 @@ class GameView @JvmOverloads constructor(
     }
 
 
-
+    /**
+     * Creates and returns a solid color square bitmap.
+     * Useful for representing player skins or debugging visuals.
+     *
+     * @param color The color of the square.
+     * @param size The width and height of the square in pixels.
+     * @return A bitmap of the specified color square.
+     */
     private fun createColorSquare(color: Int, size: Int): Bitmap {
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
@@ -568,7 +653,11 @@ class GameView @JvmOverloads constructor(
         return bmp
 
     }
-
+    /**
+     * Draws the user interface elements, such as level, score, and coin count, on the canvas.
+     *
+     * @param canvas The canvas on which the UI elements are drawn.
+     */
     private fun drawUI(canvas: Canvas) {
         val levelText = "Level: $currentLevel"
         val scoreText = "${score.toInt()}m"
@@ -580,13 +669,24 @@ class GameView @JvmOverloads constructor(
     }
 
     // ----------------- Input Handling -----------------
-
+    /**
+     * Handles accelerometer sensor changes.
+     * Updates the tilt control value based on the sensor's x-axis reading.
+     *
+     * @param event The sensor event containing the accelerometer data.
+     */
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
             tiltControl = -event.values[0] * 2.0f
         }
     }
-
+    /**
+     * Handles touch input events to control horizontal movement.
+     * Adjusts the touch control value based on the touch position relative to the center.
+     *
+     * @param event The motion event containing touch details.
+     * @return True indicating the event was handled.
+     */
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         event?.let {
             val centerX = width / 2f
@@ -601,9 +701,22 @@ class GameView @JvmOverloads constructor(
         }
         return true
     }
-
+    /**
+     * Callback for sensor accuracy changes.
+     *
+     * @param sensor The sensor whose accuracy changed.
+     * @param accuracy The new accuracy of the sensor.
+     */
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-
+    /**
+     * Called when the view's size changes.
+     * Reinitializes the physics body, scroll threshold, and platform manager based on the new dimensions.
+     *
+     * @param w The new width.
+     * @param h The new height.
+     * @param oldw The old width.
+     * @param oldh The old height.
+     */
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         loadImages(w, h)

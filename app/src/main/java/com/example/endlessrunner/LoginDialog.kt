@@ -7,14 +7,25 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
-
+/**
+ * A dialog fragment that handles user login.
+ *
+ * @property listener Callback listener to handle login events and switching to registration.
+ */
 class LoginDialog(private val listener: LoginListener) : DialogFragment() {
-
+    /**
+     * Interface defining the login dialog callbacks.
+     */
     interface LoginListener {
         fun onLogin(username: String, password: String)
         fun onSwitchToRegister()
     }
-
+    /**
+     * Creates the login dialog with input fields and buttons.
+     *
+     * @param savedInstanceState The saved instance state.
+     * @return The created [Dialog] instance.
+     */
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val builder = AlertDialog.Builder(requireContext())
         val inflater = requireActivity().layoutInflater

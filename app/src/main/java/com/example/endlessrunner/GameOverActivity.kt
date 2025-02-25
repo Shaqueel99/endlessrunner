@@ -16,7 +16,7 @@ class GameOverActivity : AppCompatActivity() {
 
     // Firebase Firestore instance
     private lateinit var firestore: FirebaseFirestore
-    private val scope = CoroutineScope(Dispatchers.Main + Job())
+    private val scope = CoroutineScope(Dispatchers.Main + Job())// Coroutine scope for Firestore operations
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

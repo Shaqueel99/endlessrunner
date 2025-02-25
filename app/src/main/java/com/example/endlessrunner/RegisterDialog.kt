@@ -20,9 +20,20 @@ import androidx.core.content.FileProvider
 import androidx.fragment.app.DialogFragment
 import com.google.firebase.storage.FirebaseStorage
 import java.io.File
-
+/**
+ * A dialog fragment that handles user registration.
+ * Allows a user to input a username, password, and optionally upload a profile image.
+ *
+ * @property listener The callback listener for registration events.
+ */
 class RegisterDialog(private val listener: RegisterListener) : DialogFragment() {
-
+    /**
+     * Called when a user successfully enters registration data.
+     *
+     * @param username The chosen username.
+     * @param password The chosen password.
+     * @param imagePath The URL of the uploaded profile image (optional).
+     */
     interface RegisterListener {
         fun onRegister(username: String, password: String, imagePath: String?)
     }
@@ -33,7 +44,12 @@ class RegisterDialog(private val listener: RegisterListener) : DialogFragment() 
     private val storage = FirebaseStorage.getInstance()
     private var currentPhotoFile: File? = null
     private var imageUri: Uri? = null
-
+    /**
+     * Creates the registration dialog with inputs for username, password, and an image upload option.
+     *
+     * @param savedInstanceState The saved instance state bundle.
+     * @return The created [Dialog] instance.
+     */
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val builder = AlertDialog.Builder(requireContext())
         val inflater = requireActivity().layoutInflater
@@ -71,7 +87,9 @@ class RegisterDialog(private val listener: RegisterListener) : DialogFragment() 
         builder.setView(view)
         return builder.create()
     }
-
+    /**
+     * Opens a dialog to choose between taking a photo or selecting one from the gallery.
+     */
     private fun openImageChooser() {
         val options = arrayOf("Take Photo", "Choose from Gallery")
         AlertDialog.Builder(requireContext())
@@ -86,6 +104,9 @@ class RegisterDialog(private val listener: RegisterListener) : DialogFragment() 
     }
 
     // ========================= Camera logic =========================
+    /**
+     * Launcher for capturing a photo using the camera.
+     */
     private val cameraLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
         if (success && imageUri != null) {
             // Confirm file existence
@@ -109,7 +130,9 @@ class RegisterDialog(private val listener: RegisterListener) : DialogFragment() 
             Toast.makeText(requireContext(), "Failed to capture photo", Toast.LENGTH_SHORT).show()
         }
     }
-
+    /**
+     * Opens the camera to capture an image.
+     */
     private fun openCamera() {
         val photoFile = createImageFile()
         currentPhotoFile = photoFile
@@ -120,14 +143,20 @@ class RegisterDialog(private val listener: RegisterListener) : DialogFragment() 
         )
         cameraLauncher.launch(imageUri)
     }
-
+    /**
+     * Creates a temporary file for storing the captured image.
+     *
+     * @return The created [File] instance.
+     */
     private fun createImageFile(): File {
         val storageDir = requireContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES)
         val file = File.createTempFile("profile_image", ".jpg", storageDir)
         println("Created image file at: ${file.absolutePath}")
         return file
     }
-
+    /**
+     * Launcher to request camera permission.
+     */
     private val cameraPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
         if (isGranted) {
             openCamera()
@@ -135,7 +164,9 @@ class RegisterDialog(private val listener: RegisterListener) : DialogFragment() 
             Toast.makeText(requireContext(), "Camera permission denied", Toast.LENGTH_SHORT).show()
         }
     }
-
+    /**
+     * Requests camera permission if not already granted.
+     */
     private fun requestCameraPermission() {
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
             == PackageManager.PERMISSION_GRANTED
@@ -147,6 +178,9 @@ class RegisterDialog(private val listener: RegisterListener) : DialogFragment() 
     }
 
     // ========================= Gallery logic =========================
+    /**
+     * Launcher to request gallery permission.
+     */
     private val galleryPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
         if (isGranted) {
             openGallery()
@@ -154,7 +188,9 @@ class RegisterDialog(private val listener: RegisterListener) : DialogFragment() 
             Toast.makeText(requireContext(), "Gallery permission denied", Toast.LENGTH_SHORT).show()
         }
     }
-
+    /**
+     * Requests gallery permission based on API level.
+     */
     private fun requestGalleryPermission() {
         val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU)
             Manifest.permission.READ_MEDIA_IMAGES
@@ -169,7 +205,9 @@ class RegisterDialog(private val listener: RegisterListener) : DialogFragment() 
             galleryPermissionLauncher.launch(permission)
         }
     }
-
+    /**
+     * Handles the result from the gallery image selection.
+     */
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == Activity.RESULT_OK && requestCode == 100) {
@@ -196,6 +234,12 @@ class RegisterDialog(private val listener: RegisterListener) : DialogFragment() 
     }
 
     // ========================= Firebase Upload =========================
+    /**
+     * Uploads the selected image to Firebase Storage.
+     *
+     * @param uri The URI of the image.
+     * @param onResult Callback that returns the download URL or null on failure.
+     */
     private fun uploadImageToFirebase(uri: Uri, onResult: (String?) -> Unit) {
         val storageRef = storage.reference.child("profile_images/${System.currentTimeMillis()}.jpg")
         storageRef.putFile(uri)
@@ -214,10 +258,21 @@ class RegisterDialog(private val listener: RegisterListener) : DialogFragment() 
     }
 
     // ========================= Validation =========================
+    /**
+     * Validates the username format.
+     *
+     * @param username The username to validate.
+     * @return True if valid, false otherwise.
+     */
     private fun isValidUsername(username: String): Boolean {
         return username.matches(Regex("^[a-zA-Z0-9]{3,15}$"))
     }
-
+    /**
+     * Validates the password format.
+     *
+     * @param password The password to validate.
+     * @return True if valid, false otherwise.
+     */
     private fun isValidPassword(password: String): Boolean {
         return password.matches(Regex("^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{6,20}$"))
     }

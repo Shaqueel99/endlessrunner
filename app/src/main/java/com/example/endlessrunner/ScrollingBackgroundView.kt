@@ -10,7 +10,10 @@ import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
 import android.view.animation.LinearInterpolator
-
+/**
+ * A custom view that displays a vertically scrolling background.
+ * The background scrolls continuously and applies a tint overlay.
+ */
 class ScrollingBackgroundView(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
     // Load your background image (ensure R.drawable.bg1 is tileable vertically)
     private val backgroundBitmap: Bitmap = BitmapFactory.decodeResource(resources, R.drawable.bg1)
@@ -19,6 +22,7 @@ class ScrollingBackgroundView(context: Context, attrs: AttributeSet? = null) : V
     private val tintPaint = Paint().apply {
         color = Color.parseColor("#C93A3939")
     }
+    // Animator to update the offset for continuous scrolling.
 
     private val animator = ValueAnimator.ofFloat(0f, backgroundBitmap.height.toFloat()).apply {
         duration = 20000L // Adjust duration to control scrolling speed.
@@ -31,7 +35,11 @@ class ScrollingBackgroundView(context: Context, attrs: AttributeSet? = null) : V
         }
         start()
     }
-
+    /**
+     * Draws the scrolling background and applies a tint overlay.
+     *
+     * @param canvas The canvas on which the background is drawn.
+     */
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val bgHeight = backgroundBitmap.height.toFloat()

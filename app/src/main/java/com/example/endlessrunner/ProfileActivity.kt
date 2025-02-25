@@ -29,7 +29,10 @@
     import java.text.SimpleDateFormat
     import java.util.Date
     import java.util.Locale
-
+    /**
+     * Activity for displaying and editing the user profile.
+     * Allows the user to change their name, password, and profile picture.
+     */
     class ProfileActivity : AppCompatActivity() {
 
         // Firebase Firestore and Storage instances
@@ -39,7 +42,12 @@
         private lateinit var nameTextView: TextView
         private lateinit var coinsTextView: TextView
         var profileImageUrl: String? = null
-
+        /**
+         * Called when the activity is created.
+         * Initializes Firebase, loads user data, and sets up UI event listeners.
+         *
+         * @param savedInstanceState The saved instance state bundle.
+         */
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
             setContentView(R.layout.activity_profile)
@@ -112,6 +120,9 @@
         }
 
         // ======================= NAME ==================================
+        /**
+         * Displays a dialog allowing the user to change their display name.
+         */
         private fun showChangeNameDialog() {
             // Create an AlertDialog for input
             val builder = AlertDialog.Builder(this)
@@ -154,7 +165,12 @@
             builder.show()
         }
 
-        // Function to check if the name exists in the database
+        /**
+         * Checks if the new username already exists in the database.
+         *
+         * @param newName The new username to check.
+         * @param callback Callback returning true if the name exists.
+         */
         private fun checkIfNameExists(newName: String, callback: (Boolean) -> Unit) {
             val database = FirebaseFirestore.getInstance()
             val userRef = database.collection("users").whereEqualTo("username", newName)
@@ -169,7 +185,11 @@
             }
         }
 
-        // Function to update the name in the database
+        /**
+         * Updates the user's name in both the users collection and leaderboard.
+         *
+         * @param newName The new username.
+         */
         private fun updateNameInDatabase(newName: String) {
             // Get Username
             val sharedPrefs = getSharedPreferences("user_prefs", MODE_PRIVATE)
@@ -268,6 +288,10 @@
         }
 
         // ======================= PASSWORD =============================
+        /**
+         * Displays a dialog for changing the user's password.
+         * Validates the old password and ensures the new password meets requirements.
+         */
         private fun showChangePasswordDialog() {
             // Create a LinearLayout to hold the EditText fields
             val layout = LinearLayout(this)
@@ -366,6 +390,9 @@
         }
 
         // ======================= CAMERA ==================================
+        /**
+         * Displays a dialog to allow the user to select a new profile image.
+         */
         private fun showImageSelectionDialog() {
             val options = arrayOf("Take Photo", "Choose from Gallery", "Cancel")
             AlertDialog.Builder(this)
@@ -384,7 +411,9 @@
         private val REQUEST_IMAGE_CAPTURE = 1
         private val REQUEST_IMAGE_PICK = 2
         private var imageUri: Uri? = null
-
+        /**
+         * Checks for camera permission and opens the camera if granted.
+         */
         private fun checkCameraPermission() {
             if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -397,7 +426,9 @@
                 openCamera()
             }
         }
-
+        /**
+         * Checks for storage permission and opens the gallery if granted.
+         */
         private fun checkStoragePermission() {
             val storagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 android.Manifest.permission.READ_MEDIA_IMAGES
@@ -417,7 +448,9 @@
             }
         }
 
-
+        /**
+         * Opens the camera to capture a new profile image.
+         */
         private fun openCamera() {
             val photoFile: File? = createImageFile()
             if (photoFile != null) {
@@ -437,13 +470,18 @@
         }
 
         // ======================= GALLERY ==================================
+        /**
+         * Opens the gallery to allow the user to pick an image.
+         */
         private fun openGallery() {
             val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
             intent.type = "image/*"
             startActivityForResult(intent, REQUEST_IMAGE_PICK)
         }
 
-
+        /**
+         * Handles the result from image capture or gallery pick.
+         */
         override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
             super.onActivityResult(requestCode, resultCode, data)
             if (resultCode == RESULT_OK) {
@@ -459,7 +497,9 @@
                 }
             }
         }
-
+        /**
+         * Handles permission request results for camera and storage.
+         */
         override fun onRequestPermissionsResult(
             requestCode: Int,
             permissions: Array<out String>,
@@ -484,7 +524,11 @@
             }
         }
 
-
+        /**
+         * Uploads the selected image to Firebase Storage.
+         *
+         * @param imageUri The URI of the image to upload.
+         */
         private fun uploadImageToFirebase(imageUri: Uri) {
             val storageRef = storage.reference
             val username = getSharedPreferences("user_prefs", MODE_PRIVATE).getString("username", null)
@@ -501,7 +545,11 @@
                     }
             }
         }
-
+        /**
+         * Saves the downloaded image URL to Firestore.
+         *
+         * @param imageUrl The URL of the uploaded image.
+         */
         private fun saveImageUrlToFirestore(imageUrl: String) {
             val username =
                 getSharedPreferences("user_prefs", MODE_PRIVATE).getString("username", null)
@@ -562,7 +610,11 @@
                     }
             }
         }
-
+        /**
+         * Creates a temporary image file for capturing a photo.
+         *
+         * @return The created image [File] or null if creation fails.
+         */
         private fun createImageFile(): File? {
             return try {
                 val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -576,10 +628,21 @@
 
 
         // ========================= Validation =========================
+        /**
+         * Validates the username format.
+         *
+         * @param username The username to validate.
+         * @return True if valid, false otherwise.
+         */
         private fun isValidUsername(username: String): Boolean {
             return username.matches(Regex("^[a-zA-Z0-9]{3,15}$"))
         }
-
+        /**
+         * Validates the password format.
+         *
+         * @param password The password to validate.
+         * @return True if valid, false otherwise.
+         */
         private fun isValidPassword(password: String): Boolean {
             return password.matches(Regex("^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{6,20}$"))
         }

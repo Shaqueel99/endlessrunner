@@ -1,7 +1,19 @@
 package com.example.endlessrunner
 
 import kotlin.random.Random
-
+/**
+ * Data class representing a platform in the game.
+ *
+ * @property x The x-coordinate of the platform.
+ * @property y The y-coordinate of the platform.
+ * @property width The width of the platform.
+ * @property height The height of the platform.
+ * @property isBreakable Whether the platform can break on collision.
+ * @property isMoving Whether the platform moves horizontally.
+ * @property direction The horizontal direction of movement (-1 for left, 1 for right).
+ * @property speed The speed at which the platform moves.
+ * @property spawnLevel Indicates which image set to use (e.g., level 1, 2, or 3).
+ */
 // Added 'spawnLevel' to record which image set to use.
 data class Platform(
     var x: Float, var y: Float,
@@ -12,19 +24,36 @@ data class Platform(
     var speed: Float = 0f,
     val spawnLevel: Int = 1  // 1 = level1 images, 2 = level2 images, 3 = level3 images
 )
-
+/**
+ * Data class representing a coin in the game.
+ *
+ * @property x The x-coordinate of the coin.
+ * @property y The y-coordinate of the coin.
+ * @property size The size (diameter) of the coin.
+ */
 data class Coin(
     var x: Float,
     var y: Float,
     val size: Float = 30f
 )
-
+/**
+ * Data class representing a boost item in the game.
+ *
+ * @property x The x-coordinate of the boost.
+ * @property y The y-coordinate of the boost.
+ * @property size The size (diameter) of the boost.
+ */
 data class Boost(
     var x: Float,
     var y: Float,
     val size: Float = 40f
 )
-
+/**
+ * Manages the creation, updating, and removal of platforms, coins, and boosts.
+ *
+ * @property viewWidth The width of the game view.
+ * @property viewHeight The height of the game view.
+ */
 class PlatformManager(
     private val viewWidth: Int,
     private val viewHeight: Int
@@ -37,12 +66,22 @@ class PlatformManager(
     private val platformHeight = 20f
     private val baseMinGap = 100f
     private val baseMaxGap = 200f
-
+    /**
+     * Calculates a multiplier for difficulty based on the current score.
+     *
+     * @param score The current score.
+     * @return A multiplier that increases as the score increases.
+     */
     private fun difficultyMultiplier(score: Float): Float {
         return 1f + score / 300f
     }
 
-    // Fewer platforms spawn as levels increase.
+    /**
+     * Determines the minimum number of platforms required based on the current score.
+     *
+     * @param score The current score.
+     * @return The minimum platform count.
+     */
     private fun minPlatformCount(score: Float): Int {
         return when {
             score >= 40000 -> 3  // Level 3
@@ -53,7 +92,12 @@ class PlatformManager(
             }
         }
     }
-
+    /**
+     * Determines if a platform should be moving based on the current score.
+     *
+     * @param score The current score.
+     * @return True if the platform should move, false otherwise.
+     */
     private fun shouldBeMoving(score: Float): Boolean {
         val chance =
             if (score >= 40000) { 1.0f }
@@ -62,7 +106,12 @@ class PlatformManager(
 
         return score > 500 && Random.nextFloat() < chance
     }
-
+    /**
+     * Determines if a platform should be breakable based on the current score.
+     *
+     * @param score The current score.
+     * @return True if the platform should be breakable, false otherwise.
+     */
     private fun shouldBeBreakable(score: Float): Boolean {
         val chance =
             if (score >= 40000) { 0.7f }
@@ -70,15 +119,28 @@ class PlatformManager(
             else { 0.1f }
         return score > 800 && Random.nextFloat() < chance
     }
-
+    /**
+     * Determines if a coin should be spawned on a platform.
+     *
+     * @return True if a coin should be spawned, false otherwise.
+     */
     private fun shouldSpawnCoin(): Boolean {
         return Random.nextFloat() < 0.1f
     }
-
+    /**
+     * Determines if a boost should be spawned on a platform.
+     *
+     * @return True if a boost should be spawned, false otherwise.
+     */
     private fun shouldSpawnBoost(): Boolean {
         return Random.nextFloat() < 0.03f
     }
-
+    /**
+     * Generates the speed for a moving platform based on the current score.
+     *
+     * @param score The current score.
+     * @return The speed value for the platform.
+     */
     private fun generateSpeed(score: Float): Float {
         val base = 5f + Random.nextFloat() * 5f
         return if (score >= 40000) base * 1.5f else base
@@ -122,7 +184,13 @@ class PlatformManager(
             currentY -= baseMinGap + Random.nextFloat() * (baseMaxGap - baseMinGap)
         }
     }
-
+    /**
+     * Updates the positions of platforms, coins, and boosts based on the vertical offset,
+     * and spawns new items as necessary based on the current score.
+     *
+     * @param offset The vertical offset to apply (e.g., from player movement).
+     * @param score The current game score, used to adjust difficulty.
+     */
     fun update(offset: Float, score: Float) {
         val difficulty = difficultyMultiplier(score)
         val minGap = baseMinGap * difficulty

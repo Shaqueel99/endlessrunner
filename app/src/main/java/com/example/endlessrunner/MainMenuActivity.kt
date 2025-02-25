@@ -10,7 +10,10 @@ import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
-
+/**
+ * Main menu activity for the game.
+ * Handles user login/registration, displays user info, and navigates to other parts of the app.
+ */
 class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, RegisterDialog.RegisterListener {
 
     var profileImageUrl: String? = null
@@ -91,24 +94,35 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
             showLoginDialog()
         }
     }
-
+    /**
+     * Callback to switch from login to registration.
+     */
     override fun onSwitchToRegister() {
         showRegisterDialog()
     }
-
+    /**
+     * Displays the login dialog.
+     */
     private fun showLoginDialog() {
         val loginDialog = LoginDialog(this)
         loginDialog.isCancelable = false
         loginDialog.show(supportFragmentManager, "LoginDialog")
     }
-
+    /**
+     * Displays the registration dialog.
+     */
     private fun showRegisterDialog() {
         val registerDialog = RegisterDialog(this)
         registerDialog.isCancelable = false
         registerDialog.show(supportFragmentManager, "RegisterDialog")
     }
-
-    // Called when the user logs in from the login dialog.
+    /**
+     * Called when the user logs in from the login dialog.
+     * Authenticates the user using Firestore and updates the UI on success.
+     *
+     * @param username The entered username.
+     * @param password The entered password.
+     */
     override fun onLogin(username: String, password: String) {
         //firestore.collection("users").document(username)
         firestore.collection("users").whereEqualTo("username", username)
@@ -137,9 +151,14 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
                 showLoginDialog()
             }
     }
-
-    // Called when the user registers from the registration dialog.
-    // The imagePath here is already the download URL from Firebase Storage.
+    /**
+     * Called when the user registers from the registration dialog.
+     * Creates a new user document in Firestore if the username is not already taken.
+     *
+     * @param username The chosen username.
+     * @param password The chosen password.
+     * @param imagePath The optional profile image URL.
+     */
     override fun onRegister(username: String, password: String, imagePath: String?) {
         firestore.collection("users").document(username)
             .get()
@@ -174,7 +193,12 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
                 showRegisterDialog()
             }
     }
-
+    /**
+     * Saves the current user's details in SharedPreferences.
+     *
+     * @param username The username to save.
+     * @param profileImageUrl The profile image URL to save (if available).
+     */
     private fun saveUser(username: String, profileImageUrl: String?) {
         val sharedPrefs = getSharedPreferences("user_prefs", MODE_PRIVATE)
         with(sharedPrefs.edit()) {
@@ -187,7 +211,11 @@ class MainMenuActivity : AppCompatActivity(), LoginDialog.LoginListener, Registe
     }
 
 
-    // This function fetches the user document and updates the header UI.
+    /**
+     * Loads the user data from Firestore and updates the header UI elements.
+     *
+     * @param username The username whose data should be loaded.
+     */
     private fun loadUserData(username: String) {
         //firestore.collection("users").document(username)
         firestore.collection("users").whereEqualTo("username", username)

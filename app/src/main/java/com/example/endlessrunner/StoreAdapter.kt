@@ -13,7 +13,16 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-
+/**
+ * RecyclerView Adapter for displaying available skins in the store.
+ *
+ * @property skins A list of available [Skin] objects.
+ * @property userCoins The current number of coins the user has.
+ * @property unlockedSkins A list of skin IDs that the user has unlocked.
+ * @property equippedSkin The skin ID of the currently equipped skin.
+ * @property onBuySkin Callback invoked when a skin is purchased.
+ * @property onEquipSkin Callback invoked when a skin is equipped.
+ */
 class StoreAdapter(
     private val skins: List<Skin>,
     private var userCoins: Int,
@@ -22,19 +31,40 @@ class StoreAdapter(
     private val onBuySkin: (Skin) -> Unit,
     private val onEquipSkin: (Skin) -> Unit
 ) : RecyclerView.Adapter<StoreAdapter.SkinViewHolder>() {
-
+    /**
+     * Called when RecyclerView needs a new [SkinViewHolder].
+     *
+     * @param parent The parent ViewGroup.
+     * @param viewType The view type of the new view.
+     * @return A new instance of [SkinViewHolder].
+     */
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SkinViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_skin, parent, false)
         return SkinViewHolder(view)
     }
-
+    /**
+     * Binds the skin data to the [SkinViewHolder].
+     *
+     * @param holder The holder to bind data to.
+     * @param position The position of the item in the list.
+     */
     override fun onBindViewHolder(holder: SkinViewHolder, position: Int) {
         val skin = skins[position]
         holder.bind(skin, userCoins, unlockedSkins, equippedSkin, onBuySkin, onEquipSkin)
     }
-
+    /**
+     * Returns the total number of skins in the list.
+     *
+     * @return The size of the skins list.
+     */
     override fun getItemCount(): Int = skins.size
-
+    /**
+     * Updates the adapter's data and refreshes the list.
+     *
+     * @param newUserCoins The updated number of user coins.
+     * @param newUnlockedSkins The updated list of unlocked skin IDs.
+     * @param newEquippedSkin The updated equipped skin ID.
+     */
     // Call this method to update the adapter’s internal data and refresh the list.
     fun updateData(newUserCoins: Int, newUnlockedSkins: List<String>, newEquippedSkin: String?) {
         userCoins = newUserCoins
@@ -42,7 +72,13 @@ class StoreAdapter(
         equippedSkin = newEquippedSkin
         notifyDataSetChanged()
     }
-
+    /**
+     * Helper function to create a solid colored square bitmap.
+     *
+     * @param color The color of the square.
+     * @param size The size of the square in pixels.
+     * @return A [Bitmap] representing the colored square.
+     */
     // Helper function: Create a colored square bitmap of a given size.
     private fun createColorSquare(color: Int, size: Int): Bitmap {
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -51,13 +87,26 @@ class StoreAdapter(
         canvas.drawRect(0f, 0f, size.toFloat(), size.toFloat(), paint)
         return bmp
     }
-
+    /**
+     * ViewHolder for displaying a skin item.
+     *
+     * @property itemView The view representing a single skin item.
+     */
     class SkinViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val skinImageView: ImageView = itemView.findViewById(R.id.skinImageView)
         private val skinNameTextView: TextView = itemView.findViewById(R.id.skinNameTextView)
         private val skinPriceTextView: TextView = itemView.findViewById(R.id.skinPriceTextView)
         private val skinActionButton: Button = itemView.findViewById(R.id.skinActionButton)
-
+        /**
+         * Binds the skin data to the views and sets up the action button.
+         *
+         * @param skin The [Skin] object to display.
+         * @param userCoins The current number of coins the user has.
+         * @param unlockedSkins A list of unlocked skin IDs.
+         * @param equippedSkin The currently equipped skin ID.
+         * @param onBuySkin Callback for buying a skin.
+         * @param onEquipSkin Callback for equipping a skin.
+         */
         fun bind(
             skin: Skin,
             userCoins: Int,
